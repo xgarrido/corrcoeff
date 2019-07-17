@@ -1,0 +1,164 @@
+#+TITLE: Basic idea and plot to study correlation between CMB temperature and CMB polarization
+#+AUTHOR: Xavier Garrido
+#+EMAIL: xavier.garrido@lal.in2p3.fr
+#+STARTUP: inlineimages
+
+* Emacs config                                                     :noexport:
+#+BEGIN_SRC elisp :session venv :results none
+  (pyvenv-workon "corrcoeff-OExi_C2G")
+#+END_SRC
+
+* Plotting correlation between temperature and polarization
+
+Set fiducial values of cosmological parameters to be set to =CAMB=
+#+BEGIN_SRC ipython :session venv :results none
+  params = {
+      "ombh2": 0.022, "omch2": 0.12, "H0": 68, "tau": 0.07,
+      "As": 2.2e-9, "ns": 0.96,
+      "mnu": 0.06, "nnu": 3.046, "num_massive_neutrinos": 1}
+#+END_SRC
+
+Let's put this dictionary of values into =cobaya= internal system of configuration
+#+BEGIN_SRC ipython :session venv :results none
+  info = {
+      "params": params,
+      "likelihood": {"one": None},
+      "theory": {"camb": None}
+  }
+#+END_SRC
+
+We will now get the model given the above parameters
+#+BEGIN_SRC ipython :session venv :results none
+  from cobaya.model import get_model
+  camb_model = get_model(info)
+#+END_SRC
+Then set it to retrieve power spectra
+#+BEGIN_SRC ipython :session venv :results none
+  lmin, lmax = 2, 2000
+  camb_model.likelihood.theory.needs(Cl={"tt": lmax, "te": lmax, "ee": lmax})
+#+END_SRC
+and compute the CMB power spectra (=ell_factor=True= means normalization by $\ell(\ell+1)/(2\pi)$)
+#+BEGIN_SRC ipython :session venv :results none
+  camb_model.logposterior({})
+  Dls = camb_model.likelihood.theory.get_cl(ell_factor=True)
+#+END_SRC
+
+Finally, let's plot things between $(\ell_\text{min}, \ell_\text{max})$
+#+BEGIN_SRC ipython :session venv :results raw drawer
+  %matplotlib inline
+  import numpy as np
+  import matplotlib.pyplot as plt
+
+  l = np.arange(lmin, lmax)
+  y = (Dls["te"]/np.sqrt(Dls["tt"]*Dls["ee"]))
+  plt.plot(l, y[lmin:lmax])
+  plt.xlabel(r"$\ell$")
+  plt.ylabel(r"$R_{\rm TT, EE}$")
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[30]:
+: Text(0, 0.5, '$R_{\\rm TT, EE}$')
+[[file:./obipy-resources/37Ehxa.png]]
+:end:
+* Plotting dependence to cosmological parameters
+#+BEGIN_SRC ipython :session venv :results none
+  def plot_correlation(param_name="H0", amplitude=0.1):
+      import matplotlib
+      cmap = matplotlib.cm.get_cmap("RdBu_r")
+
+      n = 10
+      pars = np.linspace(params[param_name]*(1-amplitude),
+                         params[param_name]*(1+amplitude), n)
+      for i, p in enumerate(pars):
+          from copy import deepcopy
+          my_params = deepcopy(params)
+          my_params[param_name] = p
+          info = {
+              "params": my_params,
+              "likelihood": {"one": None},
+              "theory": {"camb": None}
+          }
+          from cobaya.model import get_model
+          camb_model = get_model(info)
+          lmin, lmax = 2, 2000
+          camb_model.likelihood.theory.needs(Cl={"tt": lmax, "te": lmax, "ee": lmax})
+          camb_model.logposterior({})
+          Dls = camb_model.likelihood.theory.get_cl(ell_factor=True)
+          l = np.arange(lmin, lmax)
+          y = (Dls["te"]/np.sqrt(Dls["tt"]*Dls["ee"]))[lmin:lmax]
+          plt.plot(l, y, color=cmap(i/n))
+      plt.xlabel(r"$\ell$")
+      plt.ylabel(r"$R_{\rm TT, EE}$")
+      sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=pars[0], vmax=pars[-1]))
+      latex = {"ombh2": "$\Omega_\mathrm{b}h^2$",
+               "omch2": "$\Omega_\mathrm{c}h^2$",
+               "H0": "$H_0$ [km/s]",
+               "tau": r"$\tau$",
+               "As": "$A_\mathrm{s}$",
+               "ns": "$n_\mathrm{s}$"}
+      plt.colorbar(sm, label=latex[param_name])
+#+END_SRC
+
+** H0
+Varying H0 by \pm 10% arrounf its fiducial value
+#+BEGIN_SRC ipython :session venv :results raw drawer
+  plot_correlation("H0")
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[55]:
+[[file:./obipy-resources/DWFveJ.png]]
+:end:
+** \Omega_{b}h^2
+#+BEGIN_SRC ipython :session venv :results raw drawer
+  plot_correlation("ombh2")
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[56]:
+[[file:./obipy-resources/lsisNn.png]]
+:end:
+** \Omega_{c}h^2
+#+BEGIN_SRC ipython :session venv :results raw drawer
+  plot_correlation("omch2")
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[57]:
+[[file:./obipy-resources/RzsI0u.png]]
+:end:
+** \tau
+#+BEGIN_SRC ipython :session venv :results raw drawer
+  plot_correlation("tau")
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[61]:
+[[file:./obipy-resources/mI1WAS.png]]
+:end:
+** As
+#+BEGIN_SRC ipython :session venv :results raw drawer
+  plot_correlation("As")
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[62]:
+[[file:./obipy-resources/yaBAB9.png]]
+:end:
+** ns
+#+BEGIN_SRC ipython :session venv :results raw drawer
+  plot_correlation("ns")
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[63]:
+[[file:./obipy-resources/0tclP7.png]]
+:end:
