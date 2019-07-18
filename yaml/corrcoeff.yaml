@@ -1,0 +1,57 @@
+# Simulation parameters
+simulation:
+  cosmo. parameters:
+    # Planck 2018
+    # H0            : 67.36 # km/s
+    cosmomc_theta : 0.0104085
+    ombh2         : 0.02237
+    omch2         : 0.1200
+    logA          : &logA 3.044
+    ns            : &ns   0.9649
+    tau           : &tau  0.0544
+    mnu           : &mnu  0.06
+    omk           : &omk  0
+    r             : &r    0
+    Alens         : &Alens 1.
+
+experiment:
+  lmin : 50
+  lmax : 3000
+
+# Cobaya setup
+cobaya:
+  debug: False
+  force: True
+  force_reproducible: False
+
+  params:
+    # Fixed
+    tau   : *tau
+    mnu   : *mnu
+    omk   : *omk
+    r     : *r
+    ns    : *ns
+    logA  : *logA
+    # Sampled
+    cosmomc_theta:
+      prior:
+        min: 0.0103
+        max: 0.0105
+    ombh2:
+      prior:
+        min: 0.017
+        max: 0.027
+    omch2:
+      prior:
+        min: 0.09
+        max: 0.15
+    # Alens:
+    #   prior:
+    #     min: 0.5
+    #     max: 1.5
+    # Derived
+    H0:
+
+  theory:
+    camb:
+      stop_at_error: False
