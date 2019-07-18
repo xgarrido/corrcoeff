@@ -1,0 +1,62 @@
+#+TITLE: Study the correlation of CMB temperature and CMB polarization
+
+* Installating the code
+** Using =pip=
+Installing the python module should be as easy as doing
+#+BEGIN_SRC shell
+  $ pip install git+https://github.com/xgarrido/corrcoeff.git
+#+END_SRC
+if you are a =sudo= user or you can install it as a normal user by doing
+#+BEGIN_SRC shell
+  $ pip install --user git+https://github.com/xgarrido/corrcoeff.git
+#+END_SRC
+
+If you plan to change things inside and/or to develop, you should first clone this repository or
+your fork with
+#+BEGIN_SRC shell
+  $ git clone https://github.com/xgarrido/corrcoeff.git /where/to/store/corrcoeff
+#+END_SRC
+You should then create a virtual environment to make sure your soft is properly encapsulated and is
+not polluted by third party softwares (such as another =camb= installation)
+#+BEGIN_SRC shell
+  $ python3 -m venv /where/to/put/you/virtual/env
+#+END_SRC
+and after having loaded your new virtual env.
+#+BEGIN_SRC shell
+  $ source /where/to/put/you/virtual/env/bin/activate
+#+END_SRC
+you should install this code in develop mode /i.e./
+#+BEGIN_SRC shell
+  $ pip install -e /where/to/store/corrcoeff
+#+END_SRC
+
+* Running the code
+The executable file is named =corrcoeff= and can be called from terminal
+#+BEGIN_SRC shell
+  $ corrcoeff --help
+    usage: corrcoeff [-h] -y YAML_FILE [--seed-simulation SEED_SIMULATION]
+                     [--seed-sampling SEED_SAMPLING] [--do-minimization]
+                     [--do-mcmc] [--use-hessian-covmat] [--use-fisher-covmat]
+                     [--output-base-dir OUTPUT_BASE_DIR]
+
+    A python program to study correlation between CMB T and E mode
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      -y YAML_FILE, --yaml-file YAML_FILE
+                            Yaml file holding sim/minization setup
+      --seed-simulation SEED_SIMULATION
+                            Set seed for the simulation random generator
+      --seed-sampling SEED_SAMPLING
+                            Set seed for the sampling random generator
+      --do-minimization     Use minimization sampler
+      --do-mcmc             Use MCMC sampler
+      --use-hessian-covmat  Use covariance matrix from minimization
+      --use-fisher-covmat   Use covariance matrix from Fisher calculation
+      --output-base-dir OUTPUT_BASE_DIR
+                            Set the output base dir where to store results
+
+#+END_SRC
+
+The =yaml= files holds the simulation configuration and the =cobaya= sampling setup. An example is
+provided within the repository with the default \Lambda{}CDM parameters used in this analysis.

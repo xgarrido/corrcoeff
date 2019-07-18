@@ -70,7 +70,7 @@ def store(setup):
 # Main function:
 def main():
     import argparse
-    parser = argparse.ArgumentParser(description="A python program to check experiment consistency beyond CMB cosmic variance")
+    parser = argparse.ArgumentParser(description="A python program to study correlation between CMB T and E mode")
     parser.add_argument("-y", "--yaml-file", help="Yaml file holding sim/minization setup",
                         default=None, required=True)
     parser.add_argument("--seed-simulation", help="Set seed for the simulation random generator",
