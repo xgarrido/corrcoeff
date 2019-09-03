@@ -1,6 +1,6 @@
 import numpy as np
 
-def get_theory_dls(setup, lmax):
+def get_theory_cls(setup, lmax, ell_factor=False):
     # Get simulation parameters
     simu = setup["simulation"]
     cosmo = simu["cosmo. parameters"]
@@ -20,8 +20,8 @@ def get_theory_dls(setup, lmax):
 
     model.likelihood.theory.needs(Cl={"tt": lmax, "ee": lmax, "te": lmax})
     model.logposterior({}) # parameters are fixed
-    Dls = model.likelihood.theory.get_cl(ell_factor=True)
-    return Dls
+    Cls = model.likelihood.theory.get_cl(ell_factor=ell_factor)
+    return Cls
 
 def bin_spectrum(dl, l, lmin, lmax, delta_l):
     Nbin = np.int(lmax/delta_l)

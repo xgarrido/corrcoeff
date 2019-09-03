@@ -17,6 +17,7 @@ simulation:
 experiment:
   lmin : 50
   lmax : 3000
+  fsky : 0.4
 
 # Cobaya setup
 cobaya:
@@ -30,13 +31,22 @@ cobaya:
     mnu   : *mnu
     omk   : *omk
     r     : *r
-    ns    : *ns
-    logA  : *logA
     # Sampled
     cosmomc_theta:
       prior:
         min: 0.0103
         max: 0.0105
+    logA:
+      prior:
+        min: 3.0
+        max: 3.1
+      drop: True
+    As:
+      value: "lambda logA: 1e-10*np.exp(logA)"
+    ns:
+      prior:
+        min: 0.9
+        max: 1.1
     ombh2:
       prior:
         min: 0.017

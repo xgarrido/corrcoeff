@@ -9,18 +9,23 @@ def simulation(setup):
     # Get experiment setup
     experiment = setup["experiment"]
     lmin, lmax = experiment["lmin"], experiment["lmax"]
+    fsky = experiment["fsky"]
 
-    from beyondCV import utils
-    Dls = utils.get_theory_dls(setup, lmax)
+    from corrcoeff import utils
+    Cls = utils.get_theory_cls(setup, lmax)
     ls = np.arange(lmin, lmax)
-    Dls = Dls[lmin:lmax]
+    # Cls = Cls[lmin:lmax]
 
-    # Empty covariance matrix (so far)
-    covmat = np.array()
+    # Compute TE correlation factor
+    R = Cls["te"]/np.sqrt(Cls["tt"]*Cls["ee"])
+    R = R[lmin:lmax]
+    covmat = 1/(2*ls+1)/fsky*(R**4 - 2*R**2 + 1)
 
-    # Store simulation informations
-    simu = setup["simulation"]
-    simu.update({"Dls": Dls, "covmat": covmat})
+    print("R", R)
+    print("covmat", covmat)
+    # # Store simulation informations
+    # simu = setup["simulation"]
+    # simu.update({"Cls": Cls, "covmat": covmat})
 
 
 def sampling(setup):
@@ -94,7 +99,7 @@ def main():
         setup = yaml.load(stream)
 
     # Do the simulation
-    print("INFO: Doing simulation for '{}' survey".format(survey))
+    print("INFO: Doing simulation")
     if args.seed_simulation:
         print("WARNING: Seed for simulation set to {} value".format(args.seed_simulation))
         setup["seed_simulation"] = args.seed_simulation
@@ -124,7 +129,7 @@ def main():
             covmat = results.get("OptimizeResult").get("hess_inv")
             mcmc_dict = {"mcmc": {"covmat": covmat, "covmat_params": covmat_params}}
         elif args.use_fisher_covmat:
-            from beyondCV import utils
+            from corrcoeff import utils
             covmat = utils.fisher(setup, covmat_params)
             mcmc_dict = {"mcmc": {"covmat": covmat, "covmat_params": covmat_params}}
         else:
