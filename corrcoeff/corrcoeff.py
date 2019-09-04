@@ -14,18 +14,25 @@ def simulation(setup):
     from corrcoeff import utils
     Cls = utils.get_theory_cls(setup, lmax)
     ls = np.arange(lmin, lmax)
-    # Cls = Cls[lmin:lmax]
+    Cl_tt = Cls["tt"][lmin:lmax]
+    Cl_te = Cls["te"][lmin:lmax]
+    Cl_ee = Cls["ee"][lmin:lmax]
 
-    # Compute TE correlation factor
-    R = Cls["te"]/np.sqrt(Cls["tt"]*Cls["ee"])
-    R = R[lmin:lmax]
-    covmat = 1/(2*ls+1)/fsky*(R**4 - 2*R**2 + 1)
+    study = experiment["study"]
+    if study == "R":
+        # Compute TE correlation factor
+        R = Cl_te/np.sqrt(Cl_tt*Cl_ee)
+        covmat = 1/(2*ls+1)/fsky*(R**4 - 2*R**2 + 1)
+        Cl_obs = R + np.sqrt(covmat)*np.random.randn(len(ls))
+    elif study == "TE":
+        covmat = 1/(2*ls+1)/fsky*(Cl_tt*Cl_ee+Cl_te**2)
+        Cl_obs = Cl_te + np.sqrt(covmat)*np.random.randn(len(ls))
+    else:
+        raise ValueError("Unknown study '{}'!".format(study))
 
-    print("R", R)
-    print("covmat", covmat)
-    # # Store simulation informations
-    # simu = setup["simulation"]
-    # simu.update({"Cls": Cls, "covmat": covmat})
+    # Store simulation informations
+    simu = setup["simulation"]
+    simu.update({"Cl": Cl_obs, "covmat": covmat})
 
 
 def sampling(setup):
@@ -37,16 +44,24 @@ def sampling(setup):
     # Get experiment setup
     experiment = setup["experiment"]
     lmin, lmax = experiment["lmin"], experiment["lmax"]
+    fsky = experiment["fsky"]
+    study = experiment["study"]
 
     simu = setup["simulation"]
-    Dls, cov = simu["Dls"], simu["covmat"]
+    Cl, cov = simu["Cl"], simu["covmat"]
 
     # Chi2 for CMB spectra sampling
     def chi2(_theory={"Cl": {"tt": lmax, "ee": lmax, "te": lmax}}):
-        return 0.0
-        # Dl_theo = _theory.get_cl(ell_factor=True)["tt"][lmin:lmax]
-        # chi2 = np.sum((Dl - Dl_theo)**2/cov)
-        # return -0.5*chi2
+        Cls_theo = _theory.get_cl(ell_factor=False)
+        Cl_tt_theo = Cls_theo["tt"][lmin:lmax]
+        Cl_te_theo = Cls_theo["te"][lmin:lmax]
+        Cl_ee_theo = Cls_theo["ee"][lmin:lmax]
+        if study == "R":
+            R_theo = Cl_te_theo/np.sqrt(Cl_tt_theo*Cl_ee_theo)
+            chi2 = np.sum((Cl - R_theo)**2/cov)
+        elif study == "TE":
+            chi2 = np.sum((Cl - Cl_te_theo)**2/cov)
+        return -0.5*chi2
 
     # Get cobaya setup
     info = setup["cobaya"]
@@ -78,6 +93,9 @@ def main():
     parser = argparse.ArgumentParser(description="A python program to study correlation between CMB T and E mode")
     parser.add_argument("-y", "--yaml-file", help="Yaml file holding sim/minization setup",
                         default=None, required=True)
+    parser.add_argument("--study", help="Set the observable to be studied",
+                        choices = ["R", "TE"],
+                        default=None, required=True)
     parser.add_argument("--seed-simulation", help="Set seed for the simulation random generator",
                         default=None, required=False)
     parser.add_argument("--seed-sampling", help="Set seed for the sampling random generator",
@@ -98,8 +116,12 @@ def main():
     with open(args.yaml_file, "r") as stream:
         setup = yaml.load(stream)
 
+    # Check study
+    study = args.study
+    setup["experiment"]["study"] = study
+
     # Do the simulation
-    print("INFO: Doing simulation")
+    print("INFO: Doing simulation for '{}'".format(study))
     if args.seed_simulation:
         print("WARNING: Seed for simulation set to {} value".format(args.seed_simulation))
         setup["seed_simulation"] = args.seed_simulation
