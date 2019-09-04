@@ -48,3 +48,46 @@ def bin_variance(vl, l, lmin, lmax, delta_l):
     idx = np.where(lb>lmin)
     lb, vb = lb[idx], vb[idx]
     return lb, vb
+
+def fisher(setup, covmat_params):
+    experiment = setup["experiment"]
+    lmin, lmax = experiment["lmin"], experiment["lmax"]
+    study = experiment["study"]
+
+    from copy import deepcopy
+
+    params = covmat_params
+    covmat = setup.get("simulation").get("covmat")
+    epsilon = 0.01
+    deriv = {}
+    for p in params:
+        setup_mod = deepcopy(setup)
+        parname = p if p != "logA" else "As"
+        value = setup["simulation"]["cosmo. parameters"][parname]
+        setup_mod["simulation"]["cosmo. parameters"][parname] = (1-epsilon)*value
+        Cl_minus = get_theory_cls(setup_mod, lmax)
+        setup_mod["simulation"]["cosmo. parameters"][parname] = (1+epsilon)*value
+        Cl_plus = get_theory_cls(setup_mod, lmax)
+        if study == "R":
+            plus = Cl_plus["te"]/np.sqrt(Cl_plus["tt"]*Cl_plus["ee"])
+            minus = Cl_minus["te"]/np.sqrt(Cl_minus["tt"]*Cl_minus["ee"])
+        elif study == "TE":
+            plus = Cl_plus["te"]
+            minus = Cl_minus["te"]
+        d = (plus[lmin:lmax]-minus[lmin:lmax])/(2*epsilon*value)
+        deriv[p] = d if p != "logA" else d*value
+
+    nparam = len(params)
+    fisher = np.zeros((nparam,nparam))
+    for count1, p1 in enumerate(params):
+        for count2, p2 in enumerate(params):
+            fisher[count1,count2] = np.sum(covmat**-1*deriv[p1]*deriv[p2])
+    cov = np.linalg.inv(fisher)
+    print("eigenvalues = ", np.linalg.eigvals(cov))
+    for count, p in enumerate(params):
+        if p == "logA":
+            value = np.log(1e10*setup_mod["simulation"]["cosmo. parameters"]["As"])
+        else:
+            value = setup_mod["simulation"]["cosmo. parameters"][p]
+        print(p, value, np.sqrt(cov[count,count]))
+    return cov
