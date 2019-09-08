@@ -34,13 +34,13 @@ We will now get the model given the above parameters
 #+END_SRC
 Then set it to retrieve power spectra
 #+BEGIN_SRC ipython :session venv :results none
-  lmin, lmax = 2, 2000
+  lmin, lmax = 2, 3000
   camb_model.likelihood.theory.needs(Cl={"tt": lmax, "te": lmax, "ee": lmax})
 #+END_SRC
 and compute the CMB power spectra (=ell_factor=True= means normalization by $\ell(\ell+1)/(2\pi)$)
 #+BEGIN_SRC ipython :session venv :results none
   camb_model.logposterior({})
-  Dls = camb_model.likelihood.theory.get_cl(ell_factor=True)
+  Dls = camb_model.likelihood.theory.get_cl(ell_factor=False)
 #+END_SRC
 
 Finally, let's plot things between $(\ell_\text{min}, \ell_\text{max})$
@@ -58,9 +58,9 @@ Finally, let's plot things between $(\ell_\text{min}, \ell_\text{max})$
 
 #+RESULTS:
 :results:
-# Out[30]:
+# Out[6]:
 : Text(0, 0.5, '$R_{\\rm TT, EE}$')
-[[file:./obipy-resources/37Ehxa.png]]
+[[file:./obipy-resources/IInr1L.png]]
 :end:
 * Plotting dependence to cosmological parameters
 #+BEGIN_SRC ipython :session venv :results none
@@ -97,7 +97,8 @@ Finally, let's plot things between $(\ell_\text{min}, \ell_\text{max})$
                "H0": "$H_0$ [km/s]",
                "tau": r"$\tau$",
                "As": "$A_\mathrm{s}$",
-               "ns": "$n_\mathrm{s}$"}
+               "ns": "$n_\mathrm{s}$",
+               "mnu": r"$m_\nu$"}
       plt.colorbar(sm, label=latex[param_name])
 #+END_SRC
 
@@ -161,4 +162,69 @@ Varying H0 by \pm 10% arrounf its fiducial value
 :results:
 # Out[63]:
 [[file:./obipy-resources/0tclP7.png]]
+:end:
+** m_\nu
+#+BEGIN_SRC ipython :session venv :results raw drawer
+  plot_correlation("mnu")
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[67]:
+[[file:./obipy-resources/Tbe2wd.png]]
+:end:
+* Plotting variance of correlation coefficient
+#+BEGIN_SRC ipython :session venv :results raw drawer
+  Rl = (Dls["te"]/np.sqrt(Dls["tt"]*Dls["ee"]))[lmin:lmax]
+  covmat = 1/(2*l+1)*(Rl**4-2*Rl**2+1)
+  plt.plot(l, Rl)
+  plt.fill_between(l, Rl-np.sqrt(covmat), Rl+np.sqrt(covmat))
+  Rl_obs = Rl + np.sqrt(covmat)*np.random.randn(np.alen(l))
+  plt.plot(l, Rl_obs, ".")
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[15]:
+: [<matplotlib.lines.Line2D at 0x7f42c6e4df90>]
+[[file:./obipy-resources/q62LwX.png]]
+:end:
+
+#+BEGIN_SRC ipython :session venv :results raw drawer
+plt.plot(l, (Rl-Rl_obs)/np.sqrt(covmat), ".")
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[17]:
+: [<matplotlib.lines.Line2D at 0x7f42c6d15c10>]
+[[file:./obipy-resources/8souQI.png]]
+:end:
+
+#+BEGIN_SRC ipython :session venv :results raw drawer
+  Cl_te = Dls["te"][lmin:lmax]
+  Cl_tt = Dls["tt"][lmin:lmax]
+  Cl_ee = Dls["ee"][lmin:lmax]
+  plt.semilogy(l, Cl_te)
+  covmat = 1/(2*l+1)*(Cl_tt*Cl_ee-Cl_te**2)
+  Cl_obs = Cl_te + np.sqrt(covmat)*np.random.randn(np.alen(l))
+  plt.plot(l, Cl_obs, ".")
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[23]:
+: [<matplotlib.lines.Line2D at 0x7f42c6931410>]
+[[file:./obipy-resources/W3qvsu.png]]
+:end:
+
+#+BEGIN_SRC ipython :session venv :results raw drawer
+plt.plot(l, (Cl_te-Cl_obs)/np.sqrt(covmat), ".")
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[24]:
+: [<matplotlib.lines.Line2D at 0x7f42c67942d0>]
+[[file:./obipy-resources/pG5urk.png]]
 :end:

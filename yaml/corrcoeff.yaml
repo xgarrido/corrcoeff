@@ -27,7 +27,6 @@ cobaya:
 
   params:
     # Fixed
-    tau   : *tau
     mnu   : *mnu
     omk   : *omk
     r     : *r
@@ -61,6 +60,14 @@ cobaya:
     #     max: 1.5
     # Derived
     H0:
+    tau:
+      prior:
+        min: 0.01
+        max: 0.20
+      ref:
+        dist: norm
+        loc: *tau
+        scale: 0.0073
 
   theory:
     camb:
