@@ -145,7 +145,8 @@ def main():
     if args.do_mcmc:
         # Update cobaya setup
         params = setup.get("cobaya").get("params")
-        covmat_params = [k for k, v in params.items() if isinstance(v, dict) and "prior" in v.keys()]
+        covmat_params = [k for k, v in params.items() if isinstance(v, dict)
+                         and "prior" in v.keys() and "proposal" not in v.keys()]
         print("Sampling over", covmat_params, "parameters")
         if args.use_hessian_covmat:
             covmat = results.get("OptimizeResult").get("hess_inv")

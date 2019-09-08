@@ -62,13 +62,10 @@ cobaya:
     H0:
     tau:
       prior:
-        min: 0.01
-        max: 0.20
-      ref:
         dist: norm
         loc: *tau
         scale: 0.0073
-
+      proposal: 0.0073
   theory:
     camb:
       stop_at_error: False
