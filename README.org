@@ -31,13 +31,13 @@ you should install this code in develop mode /i.e./
 #+END_SRC
 
 * Running the code
-The executable file is named =ccc= and can be called from terminal
+The executable file is named =corrcoeff= and can be called from terminal
 #+BEGIN_SRC shell
-  $ ccc --help
-    usage: ccc [-h] -y YAML_FILE [--seed-simulation SEED_SIMULATION]
-               [--seed-sampling SEED_SAMPLING] [--do-minimization]
-               [--do-mcmc] [--use-hessian-covmat] [--use-fisher-covmat]
-               [--output-base-dir OUTPUT_BASE_DIR]
+  $ corrcoeff --help
+    usage: corrcoeff [-h] -y YAML_FILE [--seed-simulation SEED_SIMULATION]
+                     [--seed-sampling SEED_SAMPLING] [--do-minimization]
+                     [--do-mcmc] [--use-hessian-covmat] [--use-fisher-covmat]
+                     [--output-base-dir OUTPUT_BASE_DIR]
 
     A python program to study correlation between CMB T and E mode
 
