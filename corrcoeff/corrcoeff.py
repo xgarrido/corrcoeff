@@ -18,6 +18,10 @@ def simulation(setup):
     Cl_te = Cls["te"][lmin:lmax]
     Cl_ee = Cls["ee"][lmin:lmax]
 
+    if experiment.get("systematics_file"):
+        syst = np.loadtxt(experiment["systematics_file"])
+        Cl_te *= syst[:,-1][lmin:lmax]
+
     study = experiment["study"]
     if study == "R":
         # Compute TE correlation factor
@@ -110,6 +114,8 @@ def main():
                         default=False, required=False, action="store_true")
     parser.add_argument("--output-base-dir", help="Set the output base dir where to store results",
                         default=".", required=False)
+    parser.add_argument("--systematics-file", help="Set the file name for the TE systematics",
+                        default=None, required=False)
     args = parser.parse_args()
 
     import yaml
@@ -119,6 +125,10 @@ def main():
     # Check study
     study = args.study
     setup["experiment"]["study"] = study
+
+    # Check systematics
+    if args.systematics_file:
+        setup["experiment"]["systematics_file"] = args.systematics_file
 
     # Do the simulation
     print("INFO: Doing simulation for '{}'".format(study))
