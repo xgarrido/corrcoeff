@@ -20,7 +20,10 @@ def simulation(setup):
 
     if experiment.get("systematics_file"):
         syst = np.loadtxt(experiment["systematics_file"])
-        Cl_te *= syst[:,-1][lmin:lmax]
+        syst = syst[:,-1][lmin:lmax]
+        Cl_te *= syst
+        Cl_tt *= syst
+        Cl_ee *= syst
 
     study = experiment["study"]
     if study == "R":
