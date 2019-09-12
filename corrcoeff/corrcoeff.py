@@ -48,15 +48,15 @@ def simulation(setup):
         covmat_RTT  = R*(covmat_TTTE/Cl_te - 0.5*covmat_TTEE/Cl_ee - 0.5*covmat_TTTT/Cl_tt)
 
         covmat_master = np.empty((3, 3, len(ls)))
-        covmat_master[0,0,:] = covmat_TTTT
-        covmat_master[0,1,:] = covmat_TTTE
-        covmat_master[0,2,:] = covmat_TTEE
-        covmat_master[1,1,:] = covmat_TETE
-        covmat_master[1,2,:] = covmat_TEEE
+        covmat_master[0,0,:] = 1/(2*ls+1)/fsky*covmat_TTTT
+        covmat_master[0,1,:] = 1/(2*ls+1)/fsky*covmat_TTTE
+        covmat_master[0,2,:] = 1/(2*ls+1)/fsky*covmat_TTEE
+        covmat_master[1,1,:] = 1/(2*ls+1)/fsky*covmat_TETE
+        covmat_master[1,2,:] = 1/(2*ls+1)/fsky*covmat_TEEE
         if study == "joint_TT_R_EE":
-            covmat_master[0,1,:] = covmat_RTT
-            covmat_master[1,1,:] = covmat_RR
-            covmat_master[1,2,:] = covmat_REE
+            covmat_master[0,1,:] = 1/(2*ls+1)/fsky*covmat_RTT
+            covmat_master[1,1,:] = 1/(2*ls+1)/fsky*covmat_RR
+            covmat_master[1,2,:] = 1/(2*ls+1)/fsky*covmat_REE
 
         covmat_master[1,0,:] = covmat_master[0,1,:]
         covmat_master[2,0,:] = covmat_master[0,2,:]
