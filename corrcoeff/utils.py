@@ -23,6 +23,10 @@ def get_theory_cls(setup, lmax, ell_factor=False):
     Cls = model.likelihood.theory.get_cl(ell_factor=ell_factor)
     return Cls
 
+def svd_pow(A, exponent):
+    E, V = np.linalg.eigh(A)
+    return np.einsum("...ab,...b,...cb->...ac",V,E**exponent,V)
+
 def bin_spectrum(dl, l, lmin, lmax, delta_l):
     Nbin = np.int(lmax/delta_l)
     db = np.zeros(Nbin)

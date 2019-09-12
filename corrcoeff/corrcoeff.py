@@ -34,6 +34,45 @@ def simulation(setup):
     elif study == "TE":
         covmat = 1/(2*ls+1)/fsky*(Cl_tt*Cl_ee+Cl_te**2)
         Cl_obs = Cl_te + np.sqrt(covmat)*np.random.randn(len(ls))
+    elif "joint" in study:
+        R = Cl_te/np.sqrt(Cl_tt*Cl_ee)
+
+        covmat_RR   = R**4 - 2*R**2 +1
+        covmat_TTTT = 2*Cl_tt**2
+        covmat_EEEE = 2*Cl_ee**2
+        covmat_TETE = Cl_tt*Cl_ee + Cl_te**2
+        covmat_TTEE = 2*Cl_te**2
+        covmat_TTTE = 2*Cl_tt*Cl_te
+        covmat_TEEE = 2*Cl_ee*Cl_te
+        covmat_REE  = R*(covmat_TEEE/Cl_te - 0.5*covmat_EEEE/Cl_ee - 0.5*covmat_TTEE/Cl_tt)
+        covmat_RTT  = R*(covmat_TTTE/Cl_te - 0.5*covmat_TTEE/Cl_ee - 0.5*covmat_TTTT/Cl_tt)
+
+        covmat_master = np.empty((3, 3, len(ls)))
+        covmat_master[0,0,:] = covmat_TTTT
+        covmat_master[0,1,:] = covmat_TTTE
+        covmat_master[0,2,:] = covmat_TTEE
+        covmat_master[1,1,:] = covmat_TETE
+        covmat_master[1,2,:] = covmat_TEEE
+        if study == "joint_TT_R_EE":
+            covmat_master[0,1,:] = covmat_RTT
+            covmat_master[1,1,:] = covmat_RR
+            covmat_master[1,2,:] = covmat_REE
+
+        covmat_master[1,0,:] = covmat_master[0,1,:]
+        covmat_master[2,0,:] = covmat_master[0,2,:]
+        covmat_master[2,1,:] = covmat_master[1,2,:]
+
+        Cl_obs = np.array([Cl_tt, Cl_te, Cl_ee])
+        if study == "joint_TT_R_EE":
+            Cl_obs[1] = R
+
+        # for i in range(len(ls)):
+        #     mat = utils.svd_pow(covmat_master[:,:,i],1./2)
+        #     Cl_obs[:,i] += np.dot(mat, np.random.randn(3))
+        # for i in range(len(ls)):
+        #     Cl_obs[:,i] += np.random.multivariate_normal(np.zeros(3), covmat_master[:,:,i])
+
+        covmat = covmat_master
     else:
         raise ValueError("Unknown study '{}'!".format(study))
 
@@ -101,7 +140,7 @@ def main():
     parser.add_argument("-y", "--yaml-file", help="Yaml file holding sim/minization setup",
                         default=None, required=True)
     parser.add_argument("--study", help="Set the observable to be studied",
-                        choices = ["R", "TE"],
+                        choices = ["R", "TE", "joint_TT_R_EE", "joint_TT_TE_EE"],
                         default=None, required=True)
     parser.add_argument("--seed-simulation", help="Set seed for the simulation random generator",
                         default=None, required=False)
@@ -117,7 +156,7 @@ def main():
                         default=False, required=False, action="store_true")
     parser.add_argument("--output-base-dir", help="Set the output base dir where to store results",
                         default=".", required=False)
-    parser.add_argument("--systematics-file", help="Set the file name for the TE systematics",
+    parser.add_argument("--systematics-file", help="Set the file name for the systematics",
                         default=None, required=False)
     args = parser.parse_args()
 
