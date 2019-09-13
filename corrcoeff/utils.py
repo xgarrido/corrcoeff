@@ -1,5 +1,14 @@
 import numpy as np
 
+def get_noise(setup):
+    lmin, lmax = setup["lmin"], setup["lmax"]
+    fsky = setup["fsky"]
+    sensitivity_mode = setup["sensitivity_mode"]
+    from corrcoeff import V3calc as V3
+    ell, N_ell_T_LA, N_ell_P_LA, Map_white_noise_levels \
+        = V3.Simons_Observatory_V3_LA_noise(sensitivity_mode, fsky, lmin, lmax, delta_ell=1, apply_beam_correction=True)
+    return N_ell_T_LA, N_ell_P_LA
+
 def get_theory_cls(setup, lmax, ell_factor=False):
     # Get simulation parameters
     simu = setup["simulation"]

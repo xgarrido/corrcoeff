@@ -14,38 +14,42 @@ def simulation(setup):
     from corrcoeff import utils
     Cls = utils.get_theory_cls(setup, lmax)
     ls = np.arange(lmin, lmax)
-    Cl_tt = Cls["tt"][lmin:lmax]
-    Cl_te = Cls["te"][lmin:lmax]
-    Cl_ee = Cls["ee"][lmin:lmax]
+    Cl_TT = Cls["tt"][lmin:lmax]
+    Cl_TE = Cls["te"][lmin:lmax]
+    Cl_EE = Cls["ee"][lmin:lmax]
 
     if experiment.get("systematics_file"):
         syst = np.loadtxt(experiment["systematics_file"])
         syst = syst[:,-1][lmin:lmax]
-        Cl_te *= syst
-        Cl_tt *= syst
-        Cl_ee *= syst
+        Cl_TE *= syst
+        Cl_TT *= syst
+        Cl_EE *= syst
 
     study = experiment["study"]
     if study == "R":
         # Compute TE correlation factor
-        R = Cl_te/np.sqrt(Cl_tt*Cl_ee)
+        R = Cl_te/np.sqrt(Cl_TT*Cl_EE)
         covmat = 1/(2*ls+1)/fsky*(R**4 - 2*R**2 + 1)
         Cl_obs = R + np.sqrt(covmat)*np.random.randn(len(ls))
     elif study == "TE":
-        covmat = 1/(2*ls+1)/fsky*(Cl_tt*Cl_ee+Cl_te**2)
-        Cl_obs = Cl_te + np.sqrt(covmat)*np.random.randn(len(ls))
+        covmat = 1/(2*ls+1)/fsky*(Cl_TT*Cl_EE+Cl_TE**2)
+        Cl_obs = Cl_TE + np.sqrt(covmat)*np.random.randn(len(ls))
     elif "joint" in study:
-        R = Cl_te/np.sqrt(Cl_tt*Cl_ee)
+        # Get SO noise
+        N_TT, N_EE = utils.get_noise(experiment)
+        N_TT, N_EE = 1/np.sum(1/N_TT, axis=0), 1/np.sum(1/N_EE, axis=0)
 
-        covmat_RR   = R**4 - 2*R**2 +1
-        covmat_TTTT = 2*Cl_tt**2
-        covmat_EEEE = 2*Cl_ee**2
-        covmat_TETE = Cl_tt*Cl_ee + Cl_te**2
-        covmat_TTEE = 2*Cl_te**2
-        covmat_TTTE = 2*Cl_tt*Cl_te
-        covmat_TEEE = 2*Cl_ee*Cl_te
-        covmat_REE  = R*(covmat_TEEE/Cl_te - 0.5*covmat_EEEE/Cl_ee - 0.5*covmat_TTEE/Cl_tt)
-        covmat_RTT  = R*(covmat_TTTE/Cl_te - 0.5*covmat_TTEE/Cl_ee - 0.5*covmat_TTTT/Cl_tt)
+        R = Cl_TE/np.sqrt(Cl_TT*Cl_EE)
+
+        covmat_RR   = R**4 - 2*R**2 + 1 + N_TT/Cl_TT + N_EE/Cl_EE + (N_TT*N_EE)/(Cl_TT*Cl_EE)
+        covmat_TTTT = 2*(Cl_TT+N_TT)**2
+        covmat_EEEE = 2*(Cl_EE+N_EE)**2
+        covmat_TETE = (Cl_TT+N_TT)*(Cl_EE+N_EE) + Cl_TE**2
+        covmat_TTEE = 2*Cl_TE**2
+        covmat_TTTE = 2*(Cl_TT+N_TT)*Cl_TE
+        covmat_TEEE = 2*(Cl_EE+N_EE)*Cl_TE
+        covmat_REE  = R*(covmat_TEEE/Cl_TE - 0.5*covmat_EEEE/Cl_EE - 0.5*covmat_TTEE/Cl_TT)
+        covmat_RTT  = R*(covmat_TTTE/Cl_TE - 0.5*covmat_TTEE/Cl_EE - 0.5*covmat_TTTT/Cl_TT)
 
         covmat_master = np.empty((3, 3, len(ls)))
         covmat_master[0,0,:] = 1/(2*ls+1)/fsky*covmat_TTTT
@@ -61,18 +65,21 @@ def simulation(setup):
         covmat_master[1,0,:] = covmat_master[0,1,:]
         covmat_master[2,0,:] = covmat_master[0,2,:]
         covmat_master[2,1,:] = covmat_master[1,2,:]
+        covmat = covmat_master
 
-        Cl_obs = np.array([Cl_tt, Cl_te, Cl_ee])
+        Cl_obs = np.array([Cl_TT, Cl_TE, Cl_EE])
         if study == "joint_TT_R_EE":
             Cl_obs[1] = R
 
         # for i in range(len(ls)):
         #     mat = utils.svd_pow(covmat_master[:,:,i],1./2)
         #     Cl_obs[:,i] += np.dot(mat, np.random.randn(3))
-        # for i in range(len(ls)):
-        #     Cl_obs[:,i] += np.random.multivariate_normal(np.zeros(3), covmat_master[:,:,i])
+        # with np.seterr(all="raise"):
+        for i in range(len(ls)):
+            if not np.all(np.linalg.eigvals(covmat_master[:,:,i]) > 0):
+                raise Exception("Matrix not positive definite !")
+            Cl_obs[:,i] += np.random.multivariate_normal(np.zeros(3), covmat_master[:,:,i])
 
-        covmat = covmat_master
     else:
         raise ValueError("Unknown study '{}'!".format(study))
 
