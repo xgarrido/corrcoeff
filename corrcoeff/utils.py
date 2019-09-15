@@ -7,7 +7,9 @@ def get_noise(setup):
     from corrcoeff import V3calc as V3
     ell, N_ell_T_LA, N_ell_P_LA, Map_white_noise_levels \
         = V3.Simons_Observatory_V3_LA_noise(sensitivity_mode, fsky, lmin, lmax, delta_ell=1, apply_beam_correction=True)
-    return N_ell_T_LA, N_ell_P_LA
+    # Keep only relevant rows
+    idx = np.intersect1d(setup["freq"], setup["freq_all"], return_indices=True)[-1]
+    return N_ell_T_LA[idx], N_ell_P_LA[idx]
 
 def get_theory_cls(setup, lmax, ell_factor=False):
     # Get simulation parameters
@@ -31,36 +33,6 @@ def get_theory_cls(setup, lmax, ell_factor=False):
     model.logposterior({}) # parameters are fixed
     Cls = model.likelihood.theory.get_cl(ell_factor=ell_factor)
     return Cls
-
-def svd_pow(A, exponent):
-    E, V = np.linalg.eigh(A)
-    return np.einsum("...ab,...b,...cb->...ac",V,E**exponent,V)
-
-def bin_spectrum(dl, l, lmin, lmax, delta_l):
-    Nbin = np.int(lmax/delta_l)
-    db = np.zeros(Nbin)
-    lb = np.zeros(Nbin)
-    for i in range(Nbin):
-        idx = np.where((l> i*delta_l) & (l< (i+1)*delta_l))
-        db[i] = np.mean(dl[idx])
-        lb[i] = np.mean(l[idx])
-    idx = np.where(lb>lmin)
-    lb,db = lb[idx],db[idx]
-    return lb, db
-
-def bin_variance(vl, l, lmin, lmax, delta_l):
-    Nbin = np.int(lmax/delta_l)
-    vb = np.zeros(Nbin)
-    lb = np.zeros(Nbin)
-    for i in range(Nbin):
-        idx = np.where((l>i*delta_l) & (l<(i+1)*delta_l))
-        vb[i] = np.sum(1/vl[idx])
-        lb[i] = np.mean(l[idx])
-    vb=1/vb
-
-    idx = np.where(lb>lmin)
-    lb, vb = lb[idx], vb[idx]
-    return lb, vb
 
 def fisher(setup, covmat_params):
     experiment = setup["experiment"]
