@@ -37,19 +37,25 @@ def simulation(setup):
 
     covmat_RR   = R**4 - 2*R**2 + 1 + N_TT/Cl_TT + N_EE/Cl_EE + (N_TT*N_EE)/(Cl_TT*Cl_EE) \
         + R**2*(0.5*(N_TT/Cl_TT - 1)**2 + 0.5*(N_EE/Cl_EE - 1)**2 - 1)
+    covmat_TTTT = 2*(Cl_TT+N_TT)**2
     covmat_TETE = (Cl_TT+N_TT)*(Cl_EE+N_EE) + Cl_TE**2
+    covmat_EEEE = 2*(Cl_EE+N_EE)**2
 
     study = experiment["study"]
     if study == "R":
         # Compute TE correlation factor
         covmat = 1/(2*ls+1)/fsky*covmat_RR
         Cl_obs = R + np.sqrt(covmat)*np.random.randn(len(ls))
+    elif study == "TT":
+        covmat = 1/(2*ls+1)/fsky*covmat_TTTT
+        Cl_obs = Cl_TT + np.sqrt(covmat)*np.random.randn(len(ls))
     elif study == "TE":
         covmat = 1/(2*ls+1)/fsky*covmat_TETE
         Cl_obs = Cl_TE + np.sqrt(covmat)*np.random.randn(len(ls))
+    elif study == "EE":
+        covmat = 1/(2*ls+1)/fsky*covmat_EEEE
+        Cl_obs = Cl_EE + np.sqrt(covmat)*np.random.randn(len(ls))
     elif "joint" in study:
-        covmat_TTTT = 2*(Cl_TT+N_TT)**2
-        covmat_EEEE = 2*(Cl_EE+N_EE)**2
         covmat_TTEE = 2*Cl_TE**2
         covmat_TTTE = 2*(Cl_TT+N_TT)*Cl_TE
         covmat_TEEE = 2*(Cl_EE+N_EE)*Cl_TE
@@ -111,30 +117,28 @@ def sampling(setup):
     # Chi2 for CMB spectra sampling
     def chi2(_theory={"Cl": {"tt": lmax, "ee": lmax, "te": lmax}}):
         Cls_theo = _theory.get_cl(ell_factor=False)
-        Cl_tt_theo = Cls_theo["tt"][lmin:lmax]
-        Cl_te_theo = Cls_theo["te"][lmin:lmax]
-        Cl_ee_theo = Cls_theo["ee"][lmin:lmax]
+        for s in ["tt", "te", "ee"]:
+            Cls_theo[s] = Cls_theo[s][lmin:lmax]
         if study == "R":
             R_theo = Cl_te_theo/np.sqrt(Cl_tt_theo*Cl_ee_theo)
             chi2 = np.sum((Cl - R_theo)**2/cov)
-        elif study == "TE":
-            chi2 = np.sum((Cl - Cl_te_theo)**2/cov)
+        else:
+            chi2 = np.sum((Cl - Cls_theo[study.lower()])**2/cov)
         return -0.5*chi2
 
     # Chi2 for joint analysis
     def chi2_joint(_theory={"Cl": {"tt": lmax, "ee": lmax, "te": lmax}}):
         Cls_theo = _theory.get_cl(ell_factor=False)
-        Cl_tt_theo = Cls_theo["tt"][lmin:lmax]
-        Cl_te_theo = Cls_theo["te"][lmin:lmax]
-        Cl_ee_theo = Cls_theo["ee"][lmin:lmax]
-        delta = np.array([Cl[0] - Cl_tt_theo, Cl[1] - Cl_te_theo, Cl[2] - Cl_ee_theo])
+        Cl_theo = np.array([Cls_theo["tt"][lmin:lmax],
+                            Cls_theo["te"][lmin:lmax],
+                            Cls_theo["ee"][lmin:lmax]])
         if study == "joint_TT_R_EE":
-            R_theo = Cl_te_theo/np.sqrt(Cl_tt_theo*Cl_ee_theo)
-            delta[1] = Cl[1] - R_theo
+            Cl_theo[1] = Cl_te_theo/np.sqrt(Cl_tt_theo*Cl_ee_theo)
+        delta = Cl - Cl_theo
 
         chi2 = 0.0
         for i in range(inv_cov.shape[-1]):
-            chi2 += np.dot(inv_cov[:,:,i], delta[:,i]).dot(delta[:,i])
+            chi2 += np.dot(delta[:,i], inv_cov[:,:,i]).dot(delta[:,i])
         return -0.5*chi2
 
     # Get cobaya setup
@@ -171,7 +175,7 @@ def main():
     parser.add_argument("-y", "--yaml-file", help="Yaml file holding sim/minization setup",
                         default=None, required=True)
     parser.add_argument("--study", help="Set the observable to be studied",
-                        choices=["R", "TE", "joint_TT_R_EE", "joint_TT_TE_EE"],
+                        choices=["R", "TE", "TT", "EE", "joint_TT_R_EE", "joint_TT_TE_EE"],
                         default=None, required=True)
     parser.add_argument("--seed-simulation", help="Set seed for the simulation random generator",
                         default=None, required=False)
@@ -195,7 +199,7 @@ def main():
 
     import yaml
     with open(args.yaml_file, "r") as stream:
-        setup = yaml.load(stream)
+        setup = yaml.load(stream, Loader=yaml.FullLoader)
 
     # Check study
     study = args.study
