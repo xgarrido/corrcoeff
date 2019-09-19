@@ -5,7 +5,7 @@
 
 * Emacs config                                                     :noexport:
 #+BEGIN_SRC elisp :session venv :results none
-  (pyvenv-workon "corrcoeff-OExi_C2G")
+  (pyvenv-workon "software-XP2uSSFK")
 #+END_SRC
 
 * Plotting correlation between temperature and polarization
@@ -228,3 +228,230 @@ plt.plot(l, (Cl_te-Cl_obs)/np.sqrt(covmat), ".")
 : [<matplotlib.lines.Line2D at 0x7f42c67942d0>]
 [[file:./obipy-resources/pG5urk.png]]
 :end:
+
+* SO noise
+#+BEGIN_SRC ipython :session venv :results none
+  import numpy as np
+  import yaml
+  with open("../yaml/corrcoeff.yaml", "r") as stream:
+      setup = yaml.load(stream)
+
+  # Get experiment setup
+  experiment = setup["experiment"]
+  fsky = experiment["fsky"]
+  lmin, lmax = 1, 8000
+  experiment["lmin"] = lmin
+  experiment["lmax"] = lmax
+  ells = np.arange(lmin, lmax)
+
+
+  from corrcoeff import utils
+  Cls = utils.get_theory_cls(setup, lmax)
+  ls = np.arange(lmin, lmax)
+  Cl_TT = Cls["tt"][lmin:lmax]
+  Cl_TE = Cls["te"][lmin:lmax]
+  Cl_EE = Cls["ee"][lmin:lmax]
+
+  modes = ["baseline", "goal"]
+  N_TT, N_EE = {}, {}
+  for i, m in enumerate(modes):
+    experiment["sensitivity_mode"] = i+1
+    N_TT[m], N_EE[m] = utils.get_noise(experiment)
+#+END_SRC
+
+#+BEGIN_SRC ipython :session venv :results raw drawer
+  import matplotlib.pyplot as plt
+  %matplotlib inline
+  plt.rcParams["xtick.top"] = plt.rcParams["ytick.right"] = True
+
+  plt.figure(figsize=(8,14))
+  grid = plt.GridSpec(2, 1, hspace=0.25, wspace=0)
+
+  norm = ells*(ells+1)/(2*np.pi)
+
+  TT = plt.subplot(grid[0])
+  TT.semilogy()
+  TT.plot([], [], c="gray", ls="-", label="baseline")
+  TT.plot([], [], c="gray", ls="--", label="goal")
+  TT.plot(ls, norm*Cl_TT, "k", label="Lensed CMB TT")
+  EE = plt.subplot(grid[1])
+  EE.semilogy()
+  EE.plot([], [], c="gray", ls="-", label="baseline")
+  EE.plot([], [], c="gray", ls="--", label="goal")
+  EE.plot(ls, norm*Cl_EE, "k", label="Lensed CMB EE")
+
+  freqs = experiment["freq_all"]
+  for i, f in enumerate(freqs):
+    TT.plot(ells, norm*N_TT["baseline"][i], "-C{}".format(i), label="{} GHz".format(f))
+    TT.plot(ells, norm*N_TT["goal"][i], "--C{}".format(i))
+    EE.plot(ells, norm*N_EE["baseline"][i], "-C{}".format(i), label="{} GHz".format(f))
+    EE.plot(ells, norm*N_EE["goal"][i], "--C{}".format(i))
+
+  TT.set_ylim(1, 10**5)
+  TT.set_xlim(lmin, lmax)
+  TT.set_title("SO LAT $TT$ Noise Power Spectra ($f_\mathrm{{sky}} = {}$)".format(fsky))
+  TT.set_ylabel("$\ell(\ell+1)C_\ell/(2\pi)~[\mu\mathrm{K}^2]$")
+  TT.set_xlabel("Multipole $\ell$")
+  TT.legend(ncol=3, loc="lower right")
+  EE.set_ylim(10**-2, 10**5)
+  EE.set_xlim(lmin, lmax)
+  EE.set_title(r"SO LAT $EE/BB$ Noise Power Spectra ($f_\mathrm{{sky}} = {}$)".format(fsky))
+  EE.set_ylabel("$\ell(\ell+1)C_\ell/(2\pi)~[\mu\mathrm{K}^2]$")
+  EE.set_xlabel("Multipole $\ell$")
+  EE.legend(ncol=3, loc="lower right")
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[25]:
+: <matplotlib.legend.Legend at 0x7f6d46409650>
+[[file:./obipy-resources/JwyqWq.png]]
+:end:
+
+* Fisher matrix for joint analysis
+#+BEGIN_SRC ipython :session venv :results raw drawer
+  import yaml
+  with open("../yaml/corrcoeff.yaml", "r") as stream:
+      setup = yaml.load(stream)
+
+  # Update cobaya setup
+  cparams = setup.get("cobaya").get("params")
+  params = [k for k, v in cparams.items() if isinstance(v, dict)
+            and "prior" in v.keys() and "proposal" not in v.keys()]
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[23]:
+:end:
+
+#+BEGIN_SRC ipython :session venv :results raw drawer
+    import numpy as np
+    experiment = setup["experiment"]
+    lmin, lmax = experiment["lmin"], experiment["lmax"]
+    fsky = experiment["fsky"]
+
+    add_noise = True
+    nell = lmax - lmin
+
+    from corrcoeff import utils
+    if add_noise:
+        # Get SO noise
+        N_TT, N_EE = utils.get_noise(experiment)
+        N_TT, N_EE = 1/np.sum(1/N_TT, axis=0), 1/np.sum(1/N_EE, axis=0)
+    else:
+        N_TT = 0.0
+        N_EE = 0.0
+    Cl = utils.get_theory_cls(setup, lmax)
+    C = np.array([[Cl["tt"][lmin:lmax] + N_TT, Cl["te"][lmin:lmax]],
+                  [Cl["te"][lmin:lmax], Cl["ee"][lmin:lmax] + N_EE]])
+    inv_C = np.empty_like(C)
+    for l in range(nell):
+      inv_C[:,:,l] = np.linalg.inv(C[:,:,l])
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[49]:
+:end:
+
+#+BEGIN_SRC ipython :session venv :results raw drawer
+  from copy import deepcopy
+  epsilon = 0.01
+  deriv = np.empty((len(params), 2, 2, nell))
+  for i, p in enumerate(params):
+      setup_mod = deepcopy(setup)
+      parname = p if p != "logA" else "As"
+      value = setup["simulation"]["cosmo. parameters"][parname]
+      setup_mod["simulation"]["cosmo. parameters"][parname] = (1-epsilon)*value
+      Cl_minus = utils.get_theory_cls(setup_mod, lmax)
+      setup_mod["simulation"]["cosmo. parameters"][parname] = (1+epsilon)*value
+      Cl_plus = utils.get_theory_cls(setup_mod, lmax)
+
+      d = {}
+      for s in ["tt", "te", "ee", "R"]:
+          if s == "R":
+              plus = Cl_plus["te"]/np.sqrt(Cl_plus["tt"]*Cl_plus["ee"])
+              minus = Cl_minus["te"]/np.sqrt(Cl_minus["tt"]*Cl_minus["ee"])
+          else:
+              plus, minus = Cl_plus[s], Cl_minus[s]
+          delta = (plus[lmin:lmax] - minus[lmin:lmax])/(2*epsilon*value)
+          d[s] = delta if p != "logA" else delta*value
+
+      deriv[i] = np.array([[d["tt"], d["te"]],
+                           [d["te"], d["ee"]]])
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[50]:
+:end:
+
+#+BEGIN_SRC ipython :session venv :results raw drawer
+deriv.shape, inv_C.shape
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[37]:
+: ((5, 2, 2, 2950), (2, 2, 2950))
+:end:
+
+#+BEGIN_SRC ipython :session venv :results raw drawer
+  nparam = len(params)
+  fisher = np.empty((nparam,nparam))
+  ls = np.arange(lmin, lmax)
+
+  for p1 in range(nparam):
+      for p2 in range(nparam):
+          somme = 0.0
+          for l in range(nell):
+              m1 = np.dot(inv_C[:,:,l], deriv[p1,:,:,l])
+              m2 = np.dot(inv_C[:,:,l], deriv[p2,:,:,l])
+              somme += (2*ls[l]+1)/2*fsky*np.trace(np.dot(m1, m2))
+          fisher[p1, p2] = somme
+  cov = np.linalg.inv(fisher)
+  print("eigenvalues = ", np.linalg.eigvals(cov))
+  for count, p in enumerate(params):
+      if p == "logA":
+          value = np.log(1e10*setup_mod["simulation"]["cosmo. parameters"]["As"])
+      else:
+          value = setup_mod["simulation"]["cosmo. parameters"][p]
+      print(p, value, np.sqrt(cov[count,count]))
+
+  # print(cov)
+
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[51]:
+:end:
+
+- TT with noise
+  | cosmomc_theta | 0.0104085 | 3.2933741232560173e-06 |
+  | logA          |     3.044 |  0.0042968435366678845 |
+  | ns            |    0.9649 |    0.00419977568054334 |
+  | ombh2         |   0.02237 | 0.00011485252438054256 |
+  | omch2         |    0.1212 |  0.0014996312324999047 |
+
+- TE with noise
+  | cosmomc_theta | 0.0104085 | 1.8866899617573544e-06 |
+  | logA          |     3.044 |   0.005727651857143012 |
+  | ns            |    0.9649 |   0.004291586166845056 |
+  | ombh2         |   0.02237 | 0.00010732709115913571 |
+  | omch2         |    0.1212 |  0.0011281652102729464 |
+
+- EE with noise
+  | cosmomc_theta | 0.0104085 | 1.8381578861674736e-06 |
+  | logA          |     3.044 |   0.003972553996340056 |
+  | ns            |    0.9649 |   0.004709350724409364 |
+  | ombh2         |   0.02237 | 0.00014877990544718571 |
+  | omch2         |    0.1212 |  0.0010988558479663373 |
+
+- TT_TE_EE with noise
+  | cosmomc_theta | 0.0104085 | 1.1402521162479395e-06 |
+  | logA          |     3.044 |  0.0022350121539707036 |
+  | ns            |    0.9649 |  0.0023879663777635067 |
+  | ombh2         |   0.02237 |  5.447897047605741e-05 |
+  | omch2         |    0.1212 |  0.0006342926186782754 |
