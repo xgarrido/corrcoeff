@@ -69,9 +69,6 @@ def simulation(setup):
         covmat[1,1,:] = covmat_TETE
         covmat[1,2,:] = covmat_TEEE
         covmat[2,2,:] = covmat_EEEE
-        covmat[1,0,:] = covmat[0,1,:]
-        covmat[2,0,:] = covmat[0,2,:]
-        covmat[2,1,:] = covmat[1,2,:]
 
         Cl_obs = np.array([Cl_TT, Cl_TE, Cl_EE])
         if study == "joint_TT_R_EE":
@@ -80,6 +77,9 @@ def simulation(setup):
             covmat[1,1,:] = covmat_RR
             covmat[1,2,:] = covmat_REE
 
+        covmat[1,0,:] = covmat[0,1,:]
+        covmat[2,0,:] = covmat[0,2,:]
+        covmat[2,1,:] = covmat[1,2,:]
         covmat *= 1/(2*ls+1)/fsky
 
         for i in range(len(ls)):
@@ -133,7 +133,7 @@ def sampling(setup):
                             Cls_theo["te"][lmin:lmax],
                             Cls_theo["ee"][lmin:lmax]])
         if study == "joint_TT_R_EE":
-            Cl_theo[1] = Cl_te_theo/np.sqrt(Cl_tt_theo*Cl_ee_theo)
+            Cl_theo[1] = Cls_theo[1]/np.sqrt(Cl_theo[0]*Cl_theo[2])
         delta = Cl - Cl_theo
 
         chi2 = 0.0
