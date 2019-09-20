@@ -120,7 +120,7 @@ def sampling(setup):
         for s in ["tt", "te", "ee"]:
             Cls_theo[s] = Cls_theo[s][lmin:lmax]
         if study == "R":
-            R_theo = Cl_theo["te"]/np.sqrt(Cl_theo["tt"]*Cl_theo["ee"])
+            R_theo = Cls_theo["te"]/np.sqrt(Cls_theo["tt"]*Cls_theo["ee"])
             chi2 = np.sum((Cl - R_theo)**2/cov)
         else:
             chi2 = np.sum((Cl - Cls_theo[study.lower()])**2/cov)
