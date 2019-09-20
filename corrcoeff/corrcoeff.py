@@ -120,7 +120,7 @@ def sampling(setup):
         for s in ["tt", "te", "ee"]:
             Cls_theo[s] = Cls_theo[s][lmin:lmax]
         if study == "R":
-            R_theo = Cl_te_theo/np.sqrt(Cl_tt_theo*Cl_ee_theo)
+            R_theo = Cl_theo["te"]/np.sqrt(Cl_theo["tt"]*Cl_theo["ee"])
             chi2 = np.sum((Cl - R_theo)**2/cov)
         else:
             chi2 = np.sum((Cl - Cls_theo[study.lower()])**2/cov)
@@ -129,9 +129,9 @@ def sampling(setup):
     # Chi2 for joint analysis
     def chi2_joint(_theory={"Cl": {"tt": lmax, "ee": lmax, "te": lmax}}):
         Cls_theo = _theory.get_cl(ell_factor=False)
-        Cl_theo = np.array([Cls_theo["tt"][lmin:lmax],
-                            Cls_theo["te"][lmin:lmax],
-                            Cls_theo["ee"][lmin:lmax]])
+        for s in ["tt", "te", "ee"]:
+            Cls_theo[s] = Cls_theo[s][lmin:lmax]
+        Cl_theo = np.array([Cls_theo["tt"], Cls_theo["te"], Cls_theo["ee"]])
         if study == "joint_TT_R_EE":
             Cl_theo[1] /= np.sqrt(Cl_theo[0]*Cl_theo[2])
         delta = Cl - Cl_theo
