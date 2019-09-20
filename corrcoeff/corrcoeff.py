@@ -133,7 +133,7 @@ def sampling(setup):
                             Cls_theo["te"][lmin:lmax],
                             Cls_theo["ee"][lmin:lmax]])
         if study == "joint_TT_R_EE":
-            Cl_theo[1] = Cls_theo[1]/np.sqrt(Cl_theo[0]*Cl_theo[2])
+            Cl_theo[1] /= np.sqrt(Cl_theo[0]*Cl_theo[2])
         delta = Cl - Cl_theo
 
         chi2 = 0.0
