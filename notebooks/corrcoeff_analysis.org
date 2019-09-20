@@ -212,7 +212,6 @@
 [[file:./obipy-resources/kCYZph.png]]
 :end:
 
-
 * MCMC distributions
 
 #+BEGIN_SRC ipython :session :results none
@@ -239,6 +238,16 @@
           mcmc_path = path.format(k, v) + "/mcmc"
           samples += [get_samples(mcmc_path, cols)]
       return samples
+#+END_SRC
+
+#+BEGIN_SRC ipython :session :results none
+  def show_ref(g, ref):
+      for i, r in enumerate(ref):
+          kwargs = dict(color="gray", ls="--", lw=1)
+          for ax in g.subplots[:,i]:
+              if ax: ax.axvline(r, **kwargs)
+          for ax in g.subplots[i,:i]:
+              if ax: ax.axhline(r, **kwargs)
 #+END_SRC
 
 ** MCMC without \tau prior
@@ -313,19 +322,22 @@
             r"$n_\mathrm{s}$",
             r"$\Omega_\mathrm{b}h^2$",
             r"$\Omega_\mathrm{c}h^2$",
-            r"$\tau$"]
+            r"$\tau$",
+            r"$\chi2$"]
   # r"$\Delta\mathrm{A}_\mathrm{L}$"]
 
   systematics = {"beam_1percent_pol_effiency_1percent": {"R": 3, "TE": 3},
                  "beam_2percent_pol_effiency_2percent": {"R": 3, "TE": 2},
                  "beam_5percent_pol_effiency_3percent": {"R": 0, "TE": 3}}
 
-  cols = [7, 6, 2, 3, 4, 5]
+  cols = [7, 6, 2, 3, 4, 5, -1]
   samples = []
   for k1, v1 in systematics.items():
       tmpl_path = r"/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_syst_{}"
       path = tmpl_path.format(k1) + "/results_{}_666_{}"
       samples += get_mcmc_samples(path, v1, cols, labels)
+      print(k1, v1, samples[-2].getMeans())
+      print(k1, v1, samples[-1].getMeans())
 
   g = plots.getSubplotPlotter()
   g.settings.lineM = ["-C0", "--C0", "-C1", "--C1", "-C2", "--C2"]
@@ -339,11 +351,248 @@
   x = np.linspace(xmin, xmax, 100)
   from scipy.stats import norm
   ax.plot(x, 0.018*norm.pdf(x, 0.054, 0.0073), color='gray', ls='--')
+
+  ref = [67.36, np.exp(3.044)/1e10, 0.9649, 0.02237, 0.1200, 0.0544]
+  show_ref(g, ref)
 #+END_SRC
 
 #+RESULTS:
 :results:
-# Out[116]:
-: [<matplotlib.lines.Line2D at 0x7f1320e72650>]
-[[file:./obipy-resources/gToS3j.png]]
+# Out[6]:
+[[file:./obipy-resources/D83RoT.png]]
+:end:
+
+* Residuals
+** Emacs config                                                     :noexport:
+#+BEGIN_SRC elisp :session venv :results none
+  (pyvenv-workon "software-XP2uSSFK")
+#+END_SRC
+** Get best parameters set
+#+BEGIN_SRC ipython :session venv :results raw drawer
+  import numpy as np
+  best_fit = {"beam_1percent_pol_effiency_1percent":
+              {"R":  {"chi2": 2931.5320, "pars": np.array([6.7017021e+01, 2.0959351e-09, 9.6998332e-01, 2.2282357e-02, 1.2078999e-01, 5.7581715e-02])},
+               "TE": {"chi2": 2931.1698, "pars": np.array([6.6987764e+01, 2.1027586e-09, 9.6422954e-01, 2.2345588e-02, 1.2101197e-01, 5.9682099e-02])}},
+              "beam_2percent_pol_effiency_2percent":
+              {"R":  {"chi2": 2931.5555, "pars": np.array([6.6852759e+01, 2.0841055e-09, 9.6931002e-01, 2.2284859e-02,1.2127333e-01, 6.0853222e-02])},
+               "TE": {"chi2": 2931.1504, "pars": np.array([6.6958877e+01, 2.0769685e-09, 9.6142612e-01, 2.2277736e-02,1.2099358e-01, 5.9149769e-02])}},
+              "beam_5percent_pol_effiency_3percent":
+              {"R":  {"chi2": 2931.5888, "pars": np.array([6.6950859e+01, 2.0940361e-09, 9.6741873e-01, 2.2275347e-02,1.2098295e-01, 5.8618206e-02])},
+               "TE": {"chi2": 2932.4420, "pars": np.array([6.6689252e+01, 2.0306725e-09, 9.5449374e-01, 2.2191995e-02,1.2149131e-01, 5.4631719e-02])}}}
+/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_syst_beam_1percent_pol_effiency_1percent/results_R_666_3/mcmc_1.txt
+Removed 0.4 as burn in
+Removed no burn in
+/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_syst_beam_1percent_pol_effiency_1percent/results_TE_666_3/mcmc_1.txt
+Removed 0.4 as burn in
+Removed no burn in
+beam_1percent_pol_effiency_1percent {'R': 3, 'TE': 3} [6.70020447e+01 2.09531840e-09 9.70032193e-01 2.22849810e-02
+ 1.20864696e-01 5.47302912e-02 2.93643925e+03]
+beam_1percent_pol_effiency_1percent {'R': 3, 'TE': 3} [6.69286373e+01 2.08396733e-09 9.64079413e-01 2.23092075e-02
+ 1.21125689e-01 5.52719972e-02 2.93652989e+03]
+/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_syst_beam_2percent_pol_effiency_2percent/results_R_666_3/mcmc_1.txt
+Removed 0.4 as burn in
+Removed no burn in
+/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_syst_beam_2percent_pol_effiency_2percent/results_TE_666_2/mcmc_1.txt
+Removed 0.4 as burn in
+Removed no burn in
+beam_2percent_pol_effiency_2percent {'R': 3, 'TE': 2} [6.70000699e+01 2.09470083e-09 9.70218674e-01 2.22852699e-02
+ 1.20868316e-01 5.48737286e-02 2.93641168e+03]
+beam_2percent_pol_effiency_2percent {'R': 3, 'TE': 2} [6.68410854e+01 2.06508362e-09 9.61217445e-01 2.22754933e-02
+ 1.21289232e-01 5.61711064e-02 2.93644701e+03]
+/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_syst_beam_5percent_pol_effiency_3percent/results_R_666_0/mcmc_1.txt
+Removed 0.4 as burn in
+Removed no burn in
+/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_syst_beam_5percent_pol_effiency_3percent/results_TE_666_3/mcmc_1.txt
+Removed 0.4 as burn in
+Removed no burn in
+beam_5percent_pol_effiency_3percent {'R': 0, 'TE': 3} [6.69855787e+01 2.09272810e-09 9.68899486e-01 2.22824496e-02
+ 1.20903293e-01 5.42341895e-02 2.93647763e+03]
+beam_5percent_pol_effiency_3percent {'R': 0, 'TE': 3} [6.68112314e+01 2.03930010e-09 9.54100212e-01 2.21947473e-02
+ 1.21208497e-01 5.66346190e-02 2.93749588e+03]
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[51]:
+:end:
+
+** Run camb via cobaya
+#+BEGIN_SRC ipython :session venv :results none
+  import yaml
+  with open("../yaml/corrcoeff.yaml", "r") as stream:
+      setup = yaml.load(stream)
+
+  # Get experiment setup
+  experiment = setup["experiment"]
+  lmin, lmax = experiment["lmin"], experiment["lmax"]
+  fsky = experiment["fsky"]
+
+  from corrcoeff import utils
+  Cls = utils.get_theory_cls(setup, lmax)
+  ls = np.arange(lmin, lmax)
+  Cl_tt = Cls["tt"][lmin:lmax]
+  Cl_te = Cls["te"][lmin:lmax]
+  Cl_ee = Cls["ee"][lmin:lmax]
+#+END_SRC
+
+
+** Get residuals
+#+BEGIN_SRC ipython :session venv :results raw drawer
+  bin_size = 50
+  def bin_array(a):
+    return a.reshape(-1, bin_size).mean(axis=1)
+
+  import matplotlib.pyplot as plt
+  %matplotlib inline
+
+  fig, ax = plt.subplots(2, 1, sharex="col", figsize=(8,6))
+  for i, (k1, v1) in enumerate(best_fit.items()):
+    for k2, v2 in v1.items():
+      from copy import deepcopy
+      setup_mod = deepcopy(setup)
+      cosmo_params = setup_mod["simulation"]["cosmo. parameters"]
+      del cosmo_params["cosmomc_theta"]
+      cosmo_params["H0"] = v2["pars"][0]
+      cosmo_params["As"] = v2["pars"][1]
+      cosmo_params["ns"] = v2["pars"][2]
+      cosmo_params["ombh2"] = v2["pars"][3]
+      cosmo_params["omch2"] = v2["pars"][4]
+      cosmo_params["tau"] = v2["pars"][5]
+
+      from corrcoeff import utils
+      Cls_mod = utils.get_theory_cls(setup_mod, lmax)
+      Cl_tt_mod = Cls_mod["tt"][lmin:lmax]
+      Cl_te_mod = Cls_mod["te"][lmin:lmax]
+      Cl_ee_mod = Cls_mod["ee"][lmin:lmax]
+
+      # Add systematics
+      syst = np.loadtxt("../systematics/syst_{}.dat".format(k1))
+      syst = syst[:,-1][lmin:lmax]
+      Cl_te_syst = Cl_te*syst
+      Cl_tt_syst = Cl_tt*syst
+      Cl_ee_syst = Cl_ee*syst
+
+      ls_binned = bin_array(ls)
+
+      np.random.seed(666)
+      if k2 == "R":
+        R_syst = Cl_te_syst/np.sqrt(Cl_tt_syst*Cl_ee_syst)
+        R_mod = Cl_te_mod/np.sqrt(Cl_tt_mod*Cl_ee_mod)
+        covmat = 1/(2*ls+1)/fsky*(R_syst**4 - 2*R_syst**2 + 1)
+        R_sim = R_syst + np.sqrt(covmat)*np.random.randn(len(ls))
+
+        R_sim_bin = bin_array(R_sim)
+        R_mod_bin = bin_array(R_mod)
+        inv_covmat_bin = (1/covmat).reshape(-1, bin_size).sum(axis=1)
+
+        # ax[1].errorbar(ls_binned, ls_binned**2*(R_mod_bin-R_sim_bin),
+        #                fmt=".C{}".format(i), yerr=ls_binned**2*np.sqrt(1/inv_covmat_bin), label="{} {} $\chi^2$ = {}".format(k1, k2, v2["chi2"]))
+        ax[1].plot(ls_binned, (R_mod_bin-R_sim_bin)/np.sqrt(1/inv_covmat_bin), label="$\chi2$ = {}".format(v2["chi2"]))
+
+      elif k2 == "TE":
+        covmat = 1/(2*ls+1)/fsky*(Cl_tt_syst*Cl_ee_syst+Cl_te_syst**2)
+        Cl_te_sim = Cl_te_syst + np.sqrt(covmat)*np.random.randn(len(ls))
+
+        Cl_te_mod_bin = bin_array(Cl_te_mod)
+        Cl_te_sim_bin = bin_array(Cl_te_sim)
+        inv_covmat_bin = (1/covmat).reshape(-1, bin_size).sum(axis=1)
+
+        # ax[0].errorbar(ls_binned, ls_binned**2*(Cl_te_mod_bin-Cl_te_sim_bin),
+        #                fmt=".C{}".format(i), yerr=ls_binned**2*np.sqrt(1/inv_covmat_bin), label="{} {} $\chi^2$ = {}".format(k1, k2, v2["chi2"]))
+        ax[0].plot(ls_binned, (Cl_te_mod_bin-Cl_te_sim_bin)/np.sqrt(1/inv_covmat_bin), label="$\chi2$ = {}".format(v2["chi2"]))
+
+  ax[1].set_xlabel("$\ell$")
+  # ax[0].set_title("$\ell^2[C_\ell^{TE}$ (best fit) - $C_\ell^{TE}$ (simulated)]")
+  # ax[1].set_title("$\ell^2[R^{TE}$ (best fit) - $R^{TE}$ (simulated)]")
+  ax[0].set_title("$C_\ell^{TE}$ (best fit) - $C_\ell^{TE}$ (simulated) [$\sigma$]")
+  ax[1].set_title("$R^{TE}$ (best fit) - $R^{TE}$ (simulated) [$\sigma$]")
+  ax[0].legend(loc="upper left", bbox_to_anchor=(1,1))
+  ax[1].legend(loc="upper left", bbox_to_anchor=(1,1))
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[99]:
+: <matplotlib.legend.Legend at 0x7f6e728eb710>
+[[file:./obipy-resources/N5awjU.png]]
+:end:
+** Show spectra given R best fit results
+#+BEGIN_SRC ipython :session venv :results raw drawer
+  fig, ax = plt.subplots(3, 1, sharex="col", figsize=(8,6))
+  for i, (k1, v1) in enumerate(best_fit.items()):
+    for k2, v2 in v1.items():
+      if k2 == "TE": continue
+      from copy import deepcopy
+      setup_mod = deepcopy(setup)
+      cosmo_params = setup_mod["simulation"]["cosmo. parameters"]
+      del cosmo_params["cosmomc_theta"]
+      cosmo_params["H0"] = v2["pars"][0]
+      cosmo_params["As"] = v2["pars"][1]
+      cosmo_params["ns"] = v2["pars"][2]
+      cosmo_params["ombh2"] = v2["pars"][3]
+      cosmo_params["omch2"] = v2["pars"][4]
+      cosmo_params["tau"] = v2["pars"][5]
+
+      from corrcoeff import utils
+      Cls_mod = utils.get_theory_cls(setup_mod, lmax)
+      Cl_tt_mod = Cls_mod["tt"][lmin:lmax]
+      Cl_te_mod = Cls_mod["te"][lmin:lmax]
+      Cl_ee_mod = Cls_mod["ee"][lmin:lmax]
+
+      ls_binned = bin_array(ls)
+      Cl_tt_mod_bin = bin_array(Cl_tt_mod)
+      Cl_te_mod_bin = bin_array(Cl_te_mod)
+      Cl_ee_mod_bin = bin_array(Cl_ee_mod)
+
+      # Add systematics
+      syst = np.loadtxt("../systematics/syst_{}.dat".format(k1))
+      syst = syst[:,-1][lmin:lmax]
+      Cl_te_syst = Cl_te*syst
+      Cl_tt_syst = Cl_tt*syst
+      Cl_ee_syst = Cl_ee*syst
+
+      #
+      def compute_residuals(mode, with_syst=True):
+        np.random.seed(666)
+        _cl_tt = Cl_tt_syst if with_syst else Cl_tt
+        _cl_te = Cl_te_syst if with_syst else Cl_te
+        _cl_ee = Cl_ee_syst if with_syst else Cl_ee
+
+        if mode == "TE":
+          _covmat = 1/(2*ls+1)/fsky*(_cl_tt*_cl_ee+_cl_te**2)
+          _cl = _cl_te
+        elif mode == "TT":
+          _covmat = 1/(2*ls+1)/fsky*2*(_cl_tt**2)
+          _cl = _cl_tt
+        elif mode == "EE":
+          _covmat = 1/(2*ls+1)/fsky*2*(_cl_ee**2)
+          _cl = _cl_ee
+        _cl_sim = _cl + np.sqrt(_covmat)*np.random.randn(len(ls))
+        _cl_fit = Cls_mod[mode.lower()][lmin:lmax]
+        _chi2 = np.sum((_cl_fit-_cl_sim)**2/_covmat)
+        _inv_covmat_bin = (1/_covmat).reshape(-1, bin_size).sum(axis=1)
+        y = (bin_array(_cl_fit) - bin_array(_cl_sim))*np.sqrt(_inv_covmat_bin)
+        return y, _chi2
+
+      for j, m in enumerate(["TE", "TT", "EE"]):
+        if i == 0:
+          y, chi2 = compute_residuals(m, with_syst=False)
+          ax[j].plot(ls_binned, y, label="$\chi2$ = {:.2f}".format(chi2), color="gray")
+
+        y, chi2 = compute_residuals(m)
+        ax[j].plot(ls_binned, y, label="$\chi2$ = {:.2f}".format(chi2), color="C{}".format(i))
+
+  ax[2].set_xlabel("$\ell$")
+  for i in range(3):
+    ax[i].set_ylabel("residuals [$\sigma$]")
+  ax[0].legend(title="$C_\ell^{TE}$ (best fit from R) - $C_\ell^{TE}$ (simulated)", loc="upper left", bbox_to_anchor=(1,1))
+  ax[1].legend(title="$C_\ell^{TT}$ (best fit from R) - $C_\ell^{TT}$ (simulated)", loc="upper left", bbox_to_anchor=(1,1))
+  ax[2].legend(title="$C_\ell^{EE}$ (best fit from R) - $C_\ell^{EE}$ (simulated)", loc="upper left", bbox_to_anchor=(1,1))
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[125]:
+: <matplotlib.legend.Legend at 0x7f6e70d5be50>
+[[file:./obipy-resources/H2POfS.png]]
 :end:

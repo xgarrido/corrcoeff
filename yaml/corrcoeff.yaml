@@ -19,6 +19,14 @@ experiment:
   lmax : 3000
   fsky : 0.4
 
+  # Simons Observatory sensitivity mode
+  sensitivity_mode: 1 #  1: baseline, 2: goal
+
+  # SO frequencies
+  freq_all: [27, 39, 93, 145, 225, 280] # GHz
+  freq: [93, 145, 225] # GHz
+
+
 # Cobaya setup
 cobaya:
   debug: False

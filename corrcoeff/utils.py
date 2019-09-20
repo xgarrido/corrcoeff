@@ -1,5 +1,16 @@
 import numpy as np
 
+def get_noise(setup):
+    lmin, lmax = setup["lmin"], setup["lmax"]
+    fsky = setup["fsky"]
+    sensitivity_mode = setup["sensitivity_mode"]
+    from corrcoeff import V3calc as V3
+    ell, N_ell_T_LA, N_ell_P_LA, Map_white_noise_levels \
+        = V3.Simons_Observatory_V3_LA_noise(sensitivity_mode, fsky, lmin, lmax, delta_ell=1, apply_beam_correction=True)
+    # Keep only relevant rows
+    idx = np.intersect1d(setup["freq"], setup["freq_all"], return_indices=True)[-1]
+    return N_ell_T_LA[idx], N_ell_P_LA[idx]
+
 def get_theory_cls(setup, lmax, ell_factor=False):
     # Get simulation parameters
     simu = setup["simulation"]
@@ -23,44 +34,24 @@ def get_theory_cls(setup, lmax, ell_factor=False):
     Cls = model.likelihood.theory.get_cl(ell_factor=ell_factor)
     return Cls
 
-def bin_spectrum(dl, l, lmin, lmax, delta_l):
-    Nbin = np.int(lmax/delta_l)
-    db = np.zeros(Nbin)
-    lb = np.zeros(Nbin)
-    for i in range(Nbin):
-        idx = np.where((l> i*delta_l) & (l< (i+1)*delta_l))
-        db[i] = np.mean(dl[idx])
-        lb[i] = np.mean(l[idx])
-    idx = np.where(lb>lmin)
-    lb,db = lb[idx],db[idx]
-    return lb, db
-
-def bin_variance(vl, l, lmin, lmax, delta_l):
-    Nbin = np.int(lmax/delta_l)
-    vb = np.zeros(Nbin)
-    lb = np.zeros(Nbin)
-    for i in range(Nbin):
-        idx = np.where((l>i*delta_l) & (l<(i+1)*delta_l))
-        vb[i] = np.sum(1/vl[idx])
-        lb[i] = np.mean(l[idx])
-    vb=1/vb
-
-    idx = np.where(lb>lmin)
-    lb, vb = lb[idx], vb[idx]
-    return lb, vb
-
 def fisher(setup, covmat_params):
     experiment = setup["experiment"]
     lmin, lmax = experiment["lmin"], experiment["lmax"]
     study = experiment["study"]
+    fsky = experiment["fsky"]
+    ls = np.arange(lmin, lmax)
+    nell = np.alen(ls)
 
     from copy import deepcopy
 
     params = covmat_params
-    covmat = setup.get("simulation").get("covmat")
     epsilon = 0.01
-    deriv = {}
-    for p in params:
+    if "joint" in study:
+        deriv = np.empty((len(params), 2, 2, nell))
+    else:
+        deriv = np.empty((len(params), nell))
+
+    for i, p in enumerate(params):
         setup_mod = deepcopy(setup)
         parname = p if p != "logA" else "As"
         value = setup["simulation"]["cosmo. parameters"][parname]
@@ -68,20 +59,70 @@ def fisher(setup, covmat_params):
         Cl_minus = get_theory_cls(setup_mod, lmax)
         setup_mod["simulation"]["cosmo. parameters"][parname] = (1+epsilon)*value
         Cl_plus = get_theory_cls(setup_mod, lmax)
-        if study == "R":
-            plus = Cl_plus["te"]/np.sqrt(Cl_plus["tt"]*Cl_plus["ee"])
-            minus = Cl_minus["te"]/np.sqrt(Cl_minus["tt"]*Cl_minus["ee"])
-        elif study == "TE":
-            plus = Cl_plus["te"]
-            minus = Cl_minus["te"]
-        d = (plus[lmin:lmax]-minus[lmin:lmax])/(2*epsilon*value)
-        deriv[p] = d if p != "logA" else d*value
 
+        d = {}
+        for s in ["tt", "te", "ee", "r"]:
+            if s == "r":
+                plus = Cl_plus["te"]/np.sqrt(Cl_plus["tt"]*Cl_plus["ee"])
+                minus = Cl_minus["te"]/np.sqrt(Cl_minus["tt"]*Cl_minus["ee"])
+            else:
+                plus, minus = Cl_plus[s], Cl_minus[s]
+            delta = (plus[lmin:lmax] - minus[lmin:lmax])/(2*epsilon*value)
+            d[s] = delta if p != "logA" else delta*value
+
+        if "joint" in study:
+            deriv[i] = np.array([[d["tt"], d["te"]],
+                                 [d["te"], d["ee"]]])
+        else:
+            deriv[i] = d[study.lower()]
+
+    # Compute covariance matrix
+    if experiment.get("add_noise"):
+        # Get SO noise
+        N_TT, N_EE = get_noise(experiment)
+        N_TT, N_EE = 1/np.sum(1/N_TT, axis=0), 1/np.sum(1/N_EE, axis=0)
+    else:
+        N_TT = 0.0
+        N_EE = 0.0
+
+    Cls = get_theory_cls(setup, lmax)
+    Cl_TT = Cls["tt"][lmin:lmax]
+    Cl_TE = Cls["te"][lmin:lmax]
+    Cl_EE = Cls["ee"][lmin:lmax]
+    if "joint" in study:
+        C = np.array([[Cl_TT + N_TT, Cl_TE],
+                      [Cl_TE, Cl_EE + N_EE]])
+    elif study == "TT":
+        C = 2*(Cl_TT + N_TT)**2
+    elif study == "TE":
+        C = (Cl_TT + N_TT)*(Cl_EE + N_EE) + Cl_TE**2
+    elif study == "EE":
+        C = 2*(Cl_EE + N_EE)**2
+    elif study == "R":
+        R = Cl_TE/np.sqrt(Cl_TT*Cl_EE)
+        C = R**4 - 2*R**2 + 1 + N_TT/Cl_TT + N_EE/Cl_EE + (N_TT*N_EE)/(Cl_TT*Cl_EE) \
+            + R**2*(0.5*(N_TT/Cl_TT - 1)**2 + 0.5*(N_EE/Cl_EE - 1)**2 - 1)
+
+    inv_C = C**-1
+    if "joint" in study:
+        for l in range(nell):
+            inv_C[:,:,l] = np.linalg.inv(C[:,:,l])
+
+    # Fisher matrix
     nparam = len(params)
-    fisher = np.zeros((nparam,nparam))
-    for count1, p1 in enumerate(params):
-        for count2, p2 in enumerate(params):
-            fisher[count1,count2] = np.sum(covmat**-1*deriv[p1]*deriv[p2])
+    fisher = np.empty((nparam,nparam))
+    for p1 in range(nparam):
+        for p2 in range(nparam):
+            somme = 0.0
+            if "joint" in study:
+                for l in range(nell):
+                    m1 = np.dot(inv_C[:,:,l], deriv[p1,:,:,l])
+                    m2 = np.dot(inv_C[:,:,l], deriv[p2,:,:,l])
+                    somme += (2*ls[l]+1)/2*fsky*np.trace(np.dot(m1, m2))
+            else:
+                somme = np.sum((2*ls+1)*fsky*inv_C*deriv[p1]*deriv[p2])
+            fisher[p1, p2] = somme
+
     cov = np.linalg.inv(fisher)
     print("eigenvalues = ", np.linalg.eigvals(cov))
     for count, p in enumerate(params):
