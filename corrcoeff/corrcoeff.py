@@ -115,6 +115,7 @@ def sampling(setup):
     Sample CMB power spectra over cosmo. parameters using `cobaya` using either
     minimization algorithms or MCMC methods.
     """
+    from corrcoeff import utils
 
     # Get experiment setup
     experiment = setup["experiment"]
@@ -137,7 +138,7 @@ def sampling(setup):
         for s in ["tt", "te", "ee"]:
             Cls_theo[s] = Cls_theo[s][lmin:lmax]
             if lbin:
-                Cls_theo[s] = bin_array(Cls_theo[s], lbin)
+                Cls_theo[s] = utils.bin_array(Cls_theo[s], lbin)
 
         if study == "R":
             R_theo = Cls_theo["te"]/np.sqrt(Cls_theo["tt"]*Cls_theo["ee"])
@@ -152,7 +153,7 @@ def sampling(setup):
         for s in ["tt", "te", "ee"]:
             Cls_theo[s] = Cls_theo[s][lmin:lmax]
             if lbin:
-                Cls_theo[s] = bin_array(Cls_theo[s], lbin)
+                Cls_theo[s] = utils.bin_array(Cls_theo[s], lbin)
         Cl_theo = np.array([Cls_theo["tt"], Cls_theo["te"], Cls_theo["ee"]])
         if study == "joint_TT_R_EE":
             Cl_theo[1] /= np.sqrt(Cl_theo[0]*Cl_theo[2])
