@@ -9,7 +9,7 @@ def simulation(setup):
     # Get experiment setup
     experiment = setup["experiment"]
     lmin, lmax = experiment["lmin"], experiment["lmax"]
-    lbin = experiment.get("lbin", None)
+    delta = experiment.get("delta", None)
     fsky = experiment["fsky"]
 
     from corrcoeff import utils
@@ -39,13 +39,13 @@ def simulation(setup):
         N_TT = 0.0
         N_EE = 0.0
 
-    if lbin:
-        ls = utils.bin_array(ls, lbin)
-        Cl_TT = utils.bin_array(Cl_TT, lbin)
-        Cl_TE = utils.bin_array(Cl_TE, lbin)
-        Cl_EE = utils.bin_array(Cl_EE, lbin)
-        N_TT = 1/utils.bin_array(1/N_TT, lbin)
-        N_EE = 1/utils.bin_array(1/N_EE, lbin)
+    if delta:
+        ls = utils.bin_array(ls, delta)
+        Cl_TT = utils.bin_array(Cl_TT, delta)
+        Cl_TE = utils.bin_array(Cl_TE, delta)
+        Cl_EE = utils.bin_array(Cl_EE, delta)
+        N_TT = utils.bin_array(N_TT, delta)
+        N_EE = utils.bin_array(N_EE, delta)
 
     R = Cl_TE/np.sqrt(Cl_TT*Cl_EE)
     covmat_RR   = R**4 - 2*R**2 + 1 + N_TT/Cl_TT + N_EE/Cl_EE + (N_TT*N_EE)/(Cl_TT*Cl_EE) \
@@ -88,8 +88,8 @@ def simulation(setup):
         covmat[2,1,:] = covmat[1,2,:]
         covmat *= 1/(2*ls+1)/fsky
 
-        if lbin:
-            covmat /= lbin
+        if delta:
+            covmat /= delta
 
         Cl_obs = np.array([Cl_TT, Cl_TE, Cl_EE])
         for i in range(len(ls)):
@@ -120,7 +120,7 @@ def sampling(setup):
     # Get experiment setup
     experiment = setup["experiment"]
     lmin, lmax = experiment["lmin"], experiment["lmax"]
-    lbin = experiment.get("lbin", None)
+    delta = experiment.get("delta", None)
     fsky = experiment["fsky"]
     study = experiment["study"]
 
@@ -137,8 +137,8 @@ def sampling(setup):
         Cls_theo = _theory.get_cl(ell_factor=False)
         for s in ["tt", "te", "ee"]:
             Cls_theo[s] = Cls_theo[s][lmin:lmax]
-            if lbin:
-                Cls_theo[s] = utils.bin_array(Cls_theo[s], lbin)
+            if delta:
+                Cls_theo[s] = utils.bin_array(Cls_theo[s], delta)
 
         if study == "R":
             R_theo = Cls_theo["te"]/np.sqrt(Cls_theo["tt"]*Cls_theo["ee"])
@@ -152,16 +152,16 @@ def sampling(setup):
         Cls_theo = _theory.get_cl(ell_factor=False)
         for s in ["tt", "te", "ee"]:
             Cls_theo[s] = Cls_theo[s][lmin:lmax]
-            if lbin:
-                Cls_theo[s] = utils.bin_array(Cls_theo[s], lbin)
+            if delta:
+                Cls_theo[s] = utils.bin_array(Cls_theo[s], delta)
         Cl_theo = np.array([Cls_theo["tt"], Cls_theo["te"], Cls_theo["ee"]])
         if study == "joint_TT_R_EE":
             Cl_theo[1] /= np.sqrt(Cl_theo[0]*Cl_theo[2])
-        delta = Cl - Cl_theo
+        delta_Cl = Cl - Cl_theo
 
         chi2 = 0.0
         for i in range(inv_cov.shape[-1]):
-            chi2 += np.dot(delta[:,i], inv_cov[:,:,i]).dot(delta[:,i])
+            chi2 += np.dot(delta_Cl[:,i], inv_cov[:,:,i]).dot(delta_Cl[:,i])
         return -0.5*chi2
 
     # Get cobaya setup
