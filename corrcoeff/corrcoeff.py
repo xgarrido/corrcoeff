@@ -22,9 +22,14 @@ def simulation(setup):
     if experiment.get("systematics_file"):
         syst = np.loadtxt(experiment["systematics_file"])
         syst = syst[:,-1][lmin:lmax]
-        Cl_TE *= syst
         Cl_TT *= syst
+        Cl_TE *= syst
         Cl_EE *= syst
+    elif experiment.get("systematics"):
+        syst = utils.get_systematics(experiment)
+        Cl_TT *= syst[0]
+        Cl_TE *= syst[1]
+        Cl_EE *= syst[2]
 
     if experiment.get("add_noise"):
         # Get SO noise

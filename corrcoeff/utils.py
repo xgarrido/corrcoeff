@@ -14,6 +14,39 @@ def get_noise(setup):
     idx = np.intersect1d(setup["freq"], setup["freq_all"], return_indices=True)[-1]
     return N_ell_T_LA[idx], N_ell_P_LA[idx]
 
+def get_systematics(setup):
+    lmin, lmax = setup["lmin"], setup["lmax"]
+    l = np.arange(lmin, lmax)
+
+    def parseFloat(str):
+        try:
+            return float(str)
+        except:
+            str = str.strip()
+            if str.endswith("%"):
+                return float(str.strip("%").strip()) / 100
+            raise Exception("Don't know how to parse %s" % str)
+
+    syst_beam = 1 - parseFloat(setup["systematics"]["beam"])
+    syst_polar = 1 - parseFloat(setup["systematics"]["polar"])
+
+    FWHM_fid= 1.5
+    beam_FWHM_rad_fid = np.deg2rad(FWHM_fid)/60
+    beam_fid = beam_FWHM_rad_fid/np.sqrt(8*np.log(2))
+    bl_fid = np.exp(-l*(l+1)*beam_fid**2/2.)
+    beam_FWHM_rad_syst = np.deg2rad(syst_beam*FWHM_fid)/60
+    beam_syst = beam_FWHM_rad_syst/np.sqrt(8*np.log(2))
+    bl_syst = np.exp(-l*(l+1)*beam_syst**2/2.)
+
+    syst_beam = (bl_fid/bl_syst)**2
+
+    TT_syst = syst_beam
+    TE_syst = syst_beam*syst_polar
+    EE_syst = syst_beam*syst_polar**2
+
+    return TT_syst, TE_syst, EE_syst
+
+
 def get_theory_cls(setup, lmax, ell_factor=False):
     # Get simulation parameters
     simu = setup["simulation"]

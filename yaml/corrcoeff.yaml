@@ -20,6 +20,10 @@ experiment:
   lbin:  25
   fsky : 0.4
 
+  systematics:
+    beam: 5%
+    polar: 3%
+
   # Simons Observatory sensitivity mode
   sensitivity_mode: 1 #  1: baseline, 2: goal
 
