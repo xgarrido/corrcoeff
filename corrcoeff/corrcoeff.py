@@ -39,8 +39,8 @@ def simulation(setup):
         Cl_TT = utils.bin_array(Cl_TT, lbin)
         Cl_TE = utils.bin_array(Cl_TE, lbin)
         Cl_EE = utils.bin_array(Cl_EE, lbin)
-        N_TT = utils.bin_array(N_TT, lbin)
-        N_EE = utils.bin_array(N_EE, lbin)
+        N_TT = 1/utils.bin_array(1/N_TT, lbin)
+        N_EE = 1/utils.bin_array(1/N_EE, lbin)
 
     R = Cl_TE/np.sqrt(Cl_TT*Cl_EE)
     covmat_RR   = R**4 - 2*R**2 + 1 + N_TT/Cl_TT + N_EE/Cl_EE + (N_TT*N_EE)/(Cl_TT*Cl_EE) \
