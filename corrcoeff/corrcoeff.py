@@ -35,13 +35,12 @@ def simulation(setup):
         N_EE = 0.0
 
     if lbin:
-        bin_array = lambda a: a.reshape(-1, lbin).mean(axis=1)
-        ls = bin_array(ls)
-        Cl_TT = bin_array(Cl_TT)
-        Cl_TE = bin_array(Cl_TE)
-        Cl_EE = bin_array(Cl_EE)
-        N_TT = bin_array(N_TT)
-        N_EE = bin_array(N_EE)
+        ls = utils.bin_array(ls, lbin)
+        Cl_TT = utils.bin_array(Cl_TT, lbin)
+        Cl_TE = utils.bin_array(Cl_TE, lbin)
+        Cl_EE = utils.bin_array(Cl_EE, lbin)
+        N_TT = utils.bin_array(N_TT, lbin)
+        N_EE = utils.bin_array(N_EE, lbin)
 
     R = Cl_TE/np.sqrt(Cl_TT*Cl_EE)
     covmat_RR   = R**4 - 2*R**2 + 1 + N_TT/Cl_TT + N_EE/Cl_EE + (N_TT*N_EE)/(Cl_TT*Cl_EE) \
@@ -95,9 +94,9 @@ def simulation(setup):
 
         if study == "joint_TT_R_EE":
             Cl_obs[1] /= np.sqrt(Cl_obs[0]*Cl_obs[2])
-            covmat[0,1,:] = covmat_RTT
+            covmat[0,1,:] = covmat[1,0,:] = covmat_RTT
             covmat[1,1,:] = covmat_RR
-            covmat[1,2,:] = covmat_REE
+            covmat[1,2,:] = covmat[2,1,:] = covmat_REE
 
     else:
         raise ValueError("Unknown study '{}'!".format(study))
@@ -115,6 +114,7 @@ def sampling(setup):
     # Get experiment setup
     experiment = setup["experiment"]
     lmin, lmax = experiment["lmin"], experiment["lmax"]
+    lbin = experiment.get("lbin", None)
     fsky = experiment["fsky"]
     study = experiment["study"]
 
@@ -131,6 +131,9 @@ def sampling(setup):
         Cls_theo = _theory.get_cl(ell_factor=False)
         for s in ["tt", "te", "ee"]:
             Cls_theo[s] = Cls_theo[s][lmin:lmax]
+            if lbin:
+                Cls_theo[s] = bin_array(Cls_theo[s], lbin)
+
         if study == "R":
             R_theo = Cls_theo["te"]/np.sqrt(Cls_theo["tt"]*Cls_theo["ee"])
             chi2 = np.sum((Cl - R_theo)**2/cov)
@@ -143,6 +146,8 @@ def sampling(setup):
         Cls_theo = _theory.get_cl(ell_factor=False)
         for s in ["tt", "te", "ee"]:
             Cls_theo[s] = Cls_theo[s][lmin:lmax]
+            if lbin:
+                Cls_theo[s] = bin_array(Cls_theo[s], lbin)
         Cl_theo = np.array([Cls_theo["tt"], Cls_theo["te"], Cls_theo["ee"]])
         if study == "joint_TT_R_EE":
             Cl_theo[1] /= np.sqrt(Cl_theo[0]*Cl_theo[2])

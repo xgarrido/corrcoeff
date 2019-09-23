@@ -1,5 +1,8 @@
 import numpy as np
 
+def bin_array(a, delta):
+    return a.reshape(-1, delta).mean(axis=1)
+
 def get_noise(setup):
     lmin, lmax = setup["lmin"], setup["lmax"]
     fsky = setup["fsky"]
