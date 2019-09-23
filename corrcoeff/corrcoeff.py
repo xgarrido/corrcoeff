@@ -9,6 +9,7 @@ def simulation(setup):
     # Get experiment setup
     experiment = setup["experiment"]
     lmin, lmax = experiment["lmin"], experiment["lmax"]
+    lbin = experiment.get("lbin", None)
     fsky = experiment["fsky"]
 
     from corrcoeff import utils
@@ -33,8 +34,16 @@ def simulation(setup):
         N_TT = 0.0
         N_EE = 0.0
 
-    R = Cl_TE/np.sqrt(Cl_TT*Cl_EE)
+    if lbin:
+        bin_array = lambda a: a.reshape(-1, lbin).mean(axis=1)
+        ls = bin_array(ls)
+        Cl_TT = bin_array(Cl_TT)
+        Cl_TE = bin_array(Cl_TE)
+        Cl_EE = bin_array(Cl_EE)
+        N_TT = bin_array(N_TT)
+        N_EE = bin_array(N_EE)
 
+    R = Cl_TE/np.sqrt(Cl_TT*Cl_EE)
     covmat_RR   = R**4 - 2*R**2 + 1 + N_TT/Cl_TT + N_EE/Cl_EE + (N_TT*N_EE)/(Cl_TT*Cl_EE) \
         + R**2*(0.5*(N_TT/Cl_TT - 1)**2 + 0.5*(N_EE/Cl_EE - 1)**2 - 1)
     covmat_TTTT = 2*(Cl_TT+N_TT)**2
@@ -70,29 +79,32 @@ def simulation(setup):
         covmat[1,2,:] = covmat_TEEE
         covmat[2,2,:] = covmat_EEEE
 
-        Cl_obs = np.array([Cl_TT, Cl_TE, Cl_EE])
-        if study == "joint_TT_R_EE":
-            Cl_obs[1] = R
-            covmat[0,1,:] = covmat_RTT
-            covmat[1,1,:] = covmat_RR
-            covmat[1,2,:] = covmat_REE
-
         covmat[1,0,:] = covmat[0,1,:]
         covmat[2,0,:] = covmat[0,2,:]
         covmat[2,1,:] = covmat[1,2,:]
         covmat *= 1/(2*ls+1)/fsky
 
+        if lbin:
+            covmat /= lbin
+
+        Cl_obs = np.array([Cl_TT, Cl_TE, Cl_EE])
         for i in range(len(ls)):
             if not np.all(np.linalg.eigvals(covmat[:,:,i]) > 0):
                 raise Exception("Matrix not positive definite !")
             Cl_obs[:,i] += np.random.multivariate_normal(np.zeros(3), covmat[:,:,i])
+
+        if study == "joint_TT_R_EE":
+            Cl_obs[1] /= np.sqrt(Cl_obs[0]*Cl_obs[2])
+            covmat[0,1,:] = covmat_RTT
+            covmat[1,1,:] = covmat_RR
+            covmat[1,2,:] = covmat_REE
 
     else:
         raise ValueError("Unknown study '{}'!".format(study))
 
     # Store simulation informations
     simu = setup["simulation"]
-    simu.update({"Cl": Cl_obs, "covmat": covmat})
+    simu.update({"ls": ls, "Cl": Cl_obs, "covmat": covmat})
 
 def sampling(setup):
     """

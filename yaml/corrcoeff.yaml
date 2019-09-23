@@ -17,6 +17,7 @@ simulation:
 experiment:
   lmin : 50
   lmax : 3000
+  lbin:  25
   fsky : 0.4
 
   # Simons Observatory sensitivity mode
