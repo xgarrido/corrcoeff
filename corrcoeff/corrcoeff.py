@@ -36,8 +36,8 @@ def simulation(setup):
         N_TT, N_EE = utils.get_noise(experiment)
         N_TT, N_EE = 1/np.sum(1/N_TT, axis=0), 1/np.sum(1/N_EE, axis=0)
     else:
-        N_TT = 0.0
-        N_EE = 0.0
+        N_TT = np.full_like(ls, 0.0)
+        N_EE = np.full_like(ls, 0.0)
 
     if delta:
         ls = utils.bin_array(ls, delta)
