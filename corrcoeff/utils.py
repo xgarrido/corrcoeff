@@ -18,7 +18,7 @@ def get_systematics(setup):
     lmin, lmax = setup["lmin"], setup["lmax"]
     l = np.arange(lmin, lmax)
 
-    def parseFloat(str):
+    def _parse(str):
         try:
             return float(str)
         except:
@@ -27,8 +27,8 @@ def get_systematics(setup):
                 return float(str.strip("%").strip()) / 100
             raise Exception("Don't know how to parse %s" % str)
 
-    syst_beam = 1 - parseFloat(setup["systematics"]["beam"])
-    syst_polar = 1 - parseFloat(setup["systematics"]["polar"])
+    syst_beam = 1 - _parse(setup["systematics"]["beam"])
+    syst_polar = 1 - _parse(setup["systematics"]["polar"])
 
     FWHM_fid= 1.5
     beam_FWHM_rad_fid = np.deg2rad(FWHM_fid)/60
