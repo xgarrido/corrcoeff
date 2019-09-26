@@ -148,7 +148,7 @@ def sampling(setup):
         return -0.5*chi2
 
     # Chi2 for joint analysis
-    def chi2_joint(_theory={"Cl": {"tt": lmax, "ee": lmax, "te": lmax}}):
+    def chi2_joint(alpha_polar=1.0, _theory={"Cl": {"tt": lmax, "ee": lmax, "te": lmax}}):
         Cls_theo = _theory.get_cl(ell_factor=False)
         for s in ["tt", "te", "ee"]:
             Cls_theo[s] = Cls_theo[s][lmin:lmax]
@@ -157,6 +157,9 @@ def sampling(setup):
         Cl_theo = np.array([Cls_theo["tt"], Cls_theo["te"], Cls_theo["ee"]])
         if study == "joint_TT_R_EE":
             Cl_theo[1] /= np.sqrt(Cl_theo[0]*Cl_theo[2])
+        # Polar efficiency
+        Cl[1] *= alpha_polar
+        Cl[2] *= alpha_polar**2
         delta_Cl = Cl - Cl_theo
 
         chi2 = 0.0
