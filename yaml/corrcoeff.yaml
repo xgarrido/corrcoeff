@@ -44,11 +44,6 @@ cobaya:
     omk   : *omk
     r     : *r
     # Sampled
-    alpha_polar:
-      prior:
-        min: 0.9
-        max: 1.1
-      proposal: 0.01
     cosmomc_theta:
       prior:
         min: 0.0103

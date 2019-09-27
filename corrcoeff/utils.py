@@ -67,7 +67,7 @@ def get_theory_cls(setup, lmax, ell_factor=False):
 
     model.likelihood.theory.needs(Cl={"tt": lmax, "ee": lmax, "te": lmax})
     model.logposterior({}) # parameters are fixed
-    Cls = model.likelihood.theory.get_cl(ell_factor=ell_factor)
+    Cls = model.likelihood.theory.get_Cl(ell_factor=ell_factor)
     return Cls
 
 def fisher(setup, covmat_params):
