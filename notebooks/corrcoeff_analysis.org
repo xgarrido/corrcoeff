@@ -12,10 +12,10 @@
   import glob
 #+END_SRC
 
-* MCMC analysis
+* MCMC chains
 #+BEGIN_SRC ipython :session :results none
   import pandas as pd
-  def get_chains(path):
+  def get_chains(path, drop=["As"]):
       all_files = glob.glob(path)
       # Sort alphabetically
       all_files.sort()
@@ -26,15 +26,15 @@
           delta_chi2 = df.chi2-np.min(df.chi2)
 
           # Remove useless columns
-          df.drop(columns=["#weight", "minuslogpost", "minuslogprior", "minuslogprior__0", "chi2", "chi2__chi2"], inplace=True)
+          df.drop(columns=["#weight", "minuslogpost", "minuslogprior", "minuslogprior__0", "chi2", "chi2__chi2"] + drop, inplace=True)
           # Insert Delta chi2 before As (which is derived and never plot)
           df.insert(value=delta_chi2, column="delta_chi2", loc=len(df.columns))
           key = f.split("/")[-2]
           chains[key] = df
       return chains
 
-  def plot_chains(path, burnin=0, labels=[], nrow=2, ncol=4):
-      chains = get_chains(path=path)
+  def plot_chains(path, burnin=0, labels=[], nrow=2, ncol=4, drop=["As"]):
+      chains = get_chains(path=path, drop=drop)
       plt.figure(figsize=(18, 10))
       for i in range(0, len(labels)):
           plt.subplot(nrow, ncol, i+1)
@@ -99,35 +99,58 @@
     r"$\Omega_\mathrm{b}h^2$",
     r"$\Omega_\mathrm{c}h^2$",
     r"$\tau$",
-    r"$A_S$",
+    # r"$A_S$",
     r"$H_0$",
     r"$\chi^2-\chi^2_\mathrm{min}$"]
-
-  result_path = r"/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_tau"
 #+END_SRC
 
 *** R(TE)
 #+BEGIN_SRC ipython :session :results raw drawer
-  plot_chains(result_path + "/*_R_*/mcmc*.txt", burnin=0, labels=labels, ncol=5)
+  result_path = r"/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_noise"
+  plot_chains(result_path + "/results_R_*/mcmc*.txt", burnin=0, labels=labels)
 #+END_SRC
 
 #+RESULTS:
 :results:
-# Out[13]:
-[[file:./obipy-resources/oPLHLh.png]]
+# Out[64]:
+[[file:./obipy-resources/OC4dCF.png]]
 :end:
 
 *** TE
 #+BEGIN_SRC ipython :session :results raw drawer
-  plot_chains(result_path + "/*_TE_*/mcmc*.txt", burnin=0, labels=labels, ncol=5)
+  result_path = r"/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_noise"
+  plot_chains(result_path + "/results_TE_*/mcmc*.txt", burnin=0, labels=labels)
 #+END_SRC
 
 #+RESULTS:
 :results:
-# Out[12]:
-[[file:./obipy-resources/lEvXgj.png]]
+# Out[63]:
+[[file:./obipy-resources/qNEETU.png]]
 :end:
 
+*** TT_R_EE
+#+BEGIN_SRC ipython :session :results raw drawer
+  result_path = r"/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff"
+  plot_chains(result_path + "/*_joint_TT_R_EE_*/mcmc*.txt", burnin=0, labels=labels, ncol=4)
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[110]:
+[[file:./obipy-resources/Kud5X1.png]]
+:end:
+
+*** TT_TE_EE
+#+BEGIN_SRC ipython :session :results raw drawer
+  result_path = r"/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_noise"
+  plot_chains(result_path + "/*_joint_TT_TE_EE_*/mcmc*.txt", burnin=0, labels=labels, ncol=4)
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[65]:
+[[file:./obipy-resources/tDfqq0.png]]
+:end:
 
 ** MCMC with systematics
 #+BEGIN_SRC ipython :session :results none
@@ -138,25 +161,27 @@
     r"$\Omega_\mathrm{b}h^2$",
     r"$\Omega_\mathrm{c}h^2$",
     r"$\tau$",
-    r"$A_S$",
+    # r"$A_S$",
     r"$H_0$",
     r"$\chi^2-\chi^2_\mathrm{min}$"]
 #+END_SRC
 
 *** 1% beam + 1% efficiency
-#+BEGIN_SRC ipython :session :results raw drawer
+#+BEGIN_SRC ipython :session :results none
   result_path = r"/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_syst_beam_1percent_pol_effiency_1percent"
+#+END_SRC
+**** R
+#+BEGIN_SRC ipython :session :results raw drawer
   plot_chains(result_path + "/*_R_*/mcmc*.txt", burnin=0, labels=labels, ncol=5)
 #+END_SRC
 
 #+RESULTS:
 :results:
-# Out[70]:
-[[file:./obipy-resources/9v4UwN.png]]
+# Out[14]:
+[[file:./obipy-resources/kPOWpU.png]]
 :end:
-
+**** TE
 #+BEGIN_SRC ipython :session :results raw drawer
-  result_path = r"/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_syst_beam_1percent_pol_effiency_1percent"
   plot_chains(result_path + "/*_TE_*/mcmc*.txt", burnin=0, labels=labels, ncol=5)
 #+END_SRC
 
@@ -165,57 +190,361 @@
 # Out[71]:
 [[file:./obipy-resources/07TbS3.png]]
 :end:
-
-*** 2% beam + 2% efficiency
+**** TT_TE_EE
 #+BEGIN_SRC ipython :session :results raw drawer
-  result_path = r"/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_syst_beam_2percent_pol_effiency_2percent"
-  plot_chains(result_path + "/*_R_*/mcmc*.txt", burnin=0, labels=labels, ncol=5)
+  plot_chains(result_path + "/*_joint_TT_TE_EE_*/mcmc*.txt", burnin=0, labels=labels)
 #+END_SRC
 
 #+RESULTS:
 :results:
-# Out[72]:
-[[file:./obipy-resources/dGc7n9.png]]
+# Out[38]:
+[[file:./obipy-resources/YmlmaN.png]]
 :end:
 
 #+BEGIN_SRC ipython :session :results raw drawer
-  result_path = r"/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_syst_beam_2percent_pol_effiency_2percent"
-  plot_chains(result_path + "/*_TE_*/mcmc*.txt", burnin=0, labels=labels, ncol=5)
+  plot_chains(result_path + "/*_joint_TT_R_EE_*/mcmc*.txt", burnin=0, labels=labels, ncol=5)
+#+END_SRC
+
+**** TT_R_EE
+#+BEGIN_SRC ipython :session :results raw drawer
+  plot_chains(result_path + "/*_joint_TT_R_EE_*/mcmc*.txt", burnin=0, labels=labels)
 #+END_SRC
 
 #+RESULTS:
 :results:
-# Out[73]:
-[[file:./obipy-resources/WIRCDd.png]]
+# Out[39]:
+[[file:./obipy-resources/lB8Suf.png]]
+:end:
+
+*** 2% beam + 2% efficiency
+#+BEGIN_SRC ipython :session :results none
+  result_path = r"/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_syst_beam_2percent_pol_effiency_2percent"
+#+END_SRC
+
+**** R
+#+BEGIN_SRC ipython :session :results raw drawer
+  plot_chains(result_path + "/results_R_*/mcmc*.txt", burnin=0, labels=labels, ncol=5)
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[21]:
+[[file:./obipy-resources/PjGYav.png]]
+:end:
+
+**** TE
+#+BEGIN_SRC ipython :session :results raw drawer
+  plot_chains(result_path + "/results_TE_*/mcmc*.txt", burnin=0, labels=labels, ncol=5)
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[22]:
+[[file:./obipy-resources/ec0HJb.png]]
+:end:
+
+**** TT_TE_EE
+#+BEGIN_SRC ipython :session :results raw drawer
+  plot_chains(result_path + "/*_TT_TE_EE_*/mcmc*.txt", burnin=0, labels=labels)
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[36]:
+[[file:./obipy-resources/3b6Kzg.png]]
+:end:
+
+**** TT_R_EE
+#+BEGIN_SRC ipython :session :results raw drawer
+  plot_chains(result_path + "/*_TT_R_EE_*/mcmc*.txt", burnin=0, labels=labels)
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[35]:
+[[file:./obipy-resources/ZDp4X0.png]]
 :end:
 
 *** 5% beam + 3% efficiency
-#+BEGIN_SRC ipython :session :results raw drawer
+#+BEGIN_SRC ipython :session :results none
   result_path = r"/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_syst_beam_5percent_pol_effiency_3percent"
-  plot_chains(result_path + "/*_R_*/mcmc*.txt", burnin=0, labels=labels, ncol=5)
+#+END_SRC
+
+**** R
+#+BEGIN_SRC ipython :session :results raw drawer
+  plot_chains(result_path + "/results_R_*/mcmc*.txt", burnin=0, labels=labels, ncol=5)
 #+END_SRC
 
 #+RESULTS:
 :results:
-# Out[74]:
-[[file:./obipy-resources/Dz3Cc6.png]]
+# Out[25]:
+[[file:./obipy-resources/woK8DL.png]]
 :end:
-
+**** TE
 #+BEGIN_SRC ipython :session :results raw drawer
-  result_path = r"/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_syst_beam_5percent_pol_effiency_3percent"
-  plot_chains(result_path + "/*_TE_*/mcmc*.txt", burnin=0, labels=labels, ncol=5)
+  plot_chains(result_path + "/results_TE_*/mcmc*.txt", burnin=0, labels=labels, ncol=5)
 #+END_SRC
 
 #+RESULTS:
 :results:
-# Out[75]:
-[[file:./obipy-resources/kCYZph.png]]
+# Out[26]:
+[[file:./obipy-resources/6sz8Ge.png]]
 :end:
+
+**** TT_TE_EE
+#+BEGIN_SRC ipython :session :results raw drawer
+  plot_chains(result_path + "/*_TT_TE_EE_*/mcmc*.txt", burnin=0, labels=labels, ncol=4)
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[50]:
+[[file:./obipy-resources/7tN0oE.png]]
+:end:
+
+**** TT_R_EE
+#+BEGIN_SRC ipython :session :results raw drawer
+  plot_chains(result_path + "/*_TT_R_EE_*/mcmc*.txt", burnin=0, labels=labels)
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[191]:
+[[file:./obipy-resources/kq5dWn.png]]
+:end:
+
+** MCMC with systematics + noise
+#+BEGIN_SRC ipython :session :results none
+  labels = [
+    r"$\theta_\mathrm{MC}$",
+    r"$\log(10^{10}A_\mathrm{s})$",
+    r"$n_\mathrm{s}$",
+    r"$\Omega_\mathrm{b}h^2$",
+    r"$\Omega_\mathrm{c}h^2$",
+    r"$\tau$",
+    # r"$A_S$",
+    r"$H_0$",
+    r"$\chi^2-\chi^2_\mathrm{min}$"]
+#+END_SRC
+
+*** 1% beam + 1% efficiency
+#+BEGIN_SRC ipython :session :results none
+  result_path = r"/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_noise_syst_beam_1percent_pol_efficiency_1percent"
+#+END_SRC
+**** R
+#+BEGIN_SRC ipython :session :results raw drawer
+  plot_chains(result_path + "/results_R_*/mcmc*.txt", burnin=0, labels=labels)
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[19]:
+[[file:./obipy-resources/rGywnh.png]]
+:end:
+**** TE
+#+BEGIN_SRC ipython :session :results raw drawer
+  plot_chains(result_path + "/results_TE_*/mcmc*.txt", burnin=0, labels=labels)
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[17]:
+[[file:./obipy-resources/tD9kxt.png]]
+:end:
+**** TT_TE_EE
+#+BEGIN_SRC ipython :session :results raw drawer
+  plot_chains(result_path + "/*_joint_TT_TE_EE_*/mcmc*.txt", burnin=0, labels=labels)
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[202]:
+[[file:./obipy-resources/OyLOfN.png]]
+:end:
+
+**** TT_R_EE
+#+BEGIN_SRC ipython :session :results raw drawer
+  plot_chains(result_path + "/*_joint_TT_R_EE_*/mcmc*.txt", burnin=0, labels=labels)
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[139]:
+[[file:./obipy-resources/HqEDzE.png]]
+:end:
+
+*** 2% beam + 2% efficiency
+#+BEGIN_SRC ipython :session :results none
+  result_path = r"/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_noise_syst_beam_2percent_pol_efficiency_2percent"
+#+END_SRC
+
+**** R
+#+BEGIN_SRC ipython :session :results raw drawer
+  plot_chains(result_path + "/results_R_*/mcmc*.txt", burnin=0, labels=labels)
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[21]:
+[[file:./obipy-resources/gjRNon.png]]
+:end:
+
+**** TE
+#+BEGIN_SRC ipython :session :results raw drawer
+  plot_chains(result_path + "/results_TE_*/mcmc*.txt", burnin=0, labels=labels)
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[22]:
+[[file:./obipy-resources/8D9WJA.png]]
+:end:
+
+**** TT_TE_EE
+#+BEGIN_SRC ipython :session :results raw drawer
+  plot_chains(result_path + "/*_TT_TE_EE_*/mcmc*.txt", burnin=0, labels=labels)
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[210]:
+[[file:./obipy-resources/BYMaGE.png]]
+:end:
+
+**** TT_R_EE
+#+BEGIN_SRC ipython :session :results raw drawer
+  plot_chains(result_path + "/*_TT_R_EE_*/mcmc*.txt", burnin=0, labels=labels)
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[118]:
+[[file:./obipy-resources/y6EONh.png]]
+:end:
+
+*** 5% beam + 3% efficiency
+#+BEGIN_SRC ipython :session :results none
+  result_path = r"/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_noise_syst_beam_5percent_pol_efficiency_3percent"
+#+END_SRC
+
+**** R
+#+BEGIN_SRC ipython :session :results raw drawer
+  plot_chains(result_path + "/results_R_*/mcmc*.txt", burnin=0, labels=labels)
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[26]:
+[[file:./obipy-resources/kN04Io.png]]
+:end:
+**** TE
+#+BEGIN_SRC ipython :session :results raw drawer
+  plot_chains(result_path + "/results_TE_*/mcmc*.txt", burnin=0, labels=labels)
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[27]:
+[[file:./obipy-resources/3WPZnS.png]]
+:end:
+
+**** TT_TE_EE
+#+BEGIN_SRC ipython :session :results raw drawer
+  plot_chains(result_path + "/*_TT_TE_EE_*/mcmc*.txt", burnin=0, labels=labels)
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[214]:
+[[file:./obipy-resources/F7qjXO.png]]
+:end:
+
+**** TT_R_EE
+#+BEGIN_SRC ipython :session :results raw drawer
+  plot_chains(result_path + "/*_TT_R_EE_*/mcmc*.txt", burnin=0, labels=labels)
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[121]:
+[[file:./obipy-resources/lJLLjO.png]]
+:end:
+
+*** 5% beam + 0% efficiency
+#+BEGIN_SRC ipython :session :results none
+  result_path = r"/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_noise_syst_beam_5percent_pol_efficiency_0percent"
+#+END_SRC
+
+**** TT_TE_EE
+#+BEGIN_SRC ipython :session :results raw drawer
+  plot_chains(result_path + "/*_TT_TE_EE_*/mcmc*.txt", burnin=0, labels=labels)
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[224]:
+[[file:./obipy-resources/t55Uc6.png]]
+:end:
+
+*** 0% beam + 3% efficiency
+#+BEGIN_SRC ipython :session :results none
+  result_path = r"/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_noise_syst_beam_0percent_pol_efficiency_3percent"
+#+END_SRC
+
+**** TT_TE_EE
+#+BEGIN_SRC ipython :session :results raw drawer
+  plot_chains(result_path + "/*_TT_TE_EE_*/mcmc*.txt", burnin=0, labels=labels)
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[227]:
+[[file:./obipy-resources/Dgtz8p.png]]
+:end:
+
 
 * MCMC distributions
 
 #+BEGIN_SRC ipython :session :results none
-  def get_mcmc_samples(path, chains, cols, labels, burnin=0.4, diff=False):
+  def get_mcmc_samples(path, cols=None, labels=None, burnin=0.4, diff=False):
+      from getdist import loadMCSamples, MCSamples
+
+      def get_samples(path, cols):
+          # Load MC Samples
+          tmp = loadMCSamples(path, no_cache=True, settings={"ignore_rows": burnin})
+
+          # Keep only interesting columns i.e. cosmo; parameters
+          samples = [tmp.samples[:, i] for i in cols]
+          if diff:
+              # Get mean diffs as arrays
+              mean_diffs = tmp.mean_diffs()
+              # Keep only interesting columns i.e. cosmo; parameters
+              samples = [mean_diffs[i] for i in cols]
+          return MCSamples(samples=samples)
+
+      import glob
+      import numpy as np
+      mcmcs = glob.glob(path)
+      if len(mcmcs) < 2:
+          chains = get_samples(mcmcs[0] + "/mcmc", cols).samples
+      else:
+          chains = np.concatenate([get_samples(i + "/mcmc", cols).samples for i in mcmcs])
+      np.random.shuffle(chains)
+      return MCSamples(samples=chains, names=labels)
+#+END_SRC
+
+#+BEGIN_SRC ipython :session :results none
+  def show_ref(g, ref):
+      for i, r in enumerate(ref):
+          kwargs = dict(color="gray", ls="--", lw=1)
+          for ax in g.subplots[:,i]:
+              if ax: ax.axvline(r, **kwargs)
+          for ax in g.subplots[i,:i]:
+              if ax: ax.axhline(r, **kwargs)
+#+END_SRC
+
+#+BEGIN_SRC ipython :session :results none
+  def get_mcmc_samples_old(path, chains, cols, labels, burnin=0.4, diff=False):
       from getdist import loadMCSamples, plots, MCSamples
 
       def get_samples(path, cols):
@@ -232,22 +561,11 @@
 
           return MCSamples(samples=samples, names=labels)
 
-
       samples = []
       for k, v in chains.items():
           mcmc_path = path.format(k, v) + "/mcmc"
           samples += [get_samples(mcmc_path, cols)]
       return samples
-#+END_SRC
-
-#+BEGIN_SRC ipython :session :results none
-  def show_ref(g, ref):
-      for i, r in enumerate(ref):
-          kwargs = dict(color="gray", ls="--", lw=1)
-          for ax in g.subplots[:,i]:
-              if ax: ax.axvline(r, **kwargs)
-          for ax in g.subplots[i,:i]:
-              if ax: ax.axhline(r, **kwargs)
 #+END_SRC
 
 ** MCMC without \tau prior
@@ -315,42 +633,68 @@
 : [<matplotlib.lines.Line2D at 0x7f1324dc6350>]
 [[file:./obipy-resources/U7krMm.png]]
 :end:
-** MCMC with systematics
-#+BEGIN_SRC ipython :session :results raw drawer
+** MCMC for joint analysis
+Load samples
+#+BEGIN_SRC ipython :session :results none
   labels = [r"$H_0~[\mathrm{km/s}]$",
             r"$A_\mathrm{s}$",
             r"$n_\mathrm{s}$",
             r"$\Omega_\mathrm{b}h^2$",
             r"$\Omega_\mathrm{c}h^2$",
-            r"$\tau$",
-            r"$\chi2$"]
+            r"$\tau$" ,
+            r"$\chi^2$"
+  ]
   # r"$\Delta\mathrm{A}_\mathrm{L}$"]
 
-  systematics = {"beam_1percent_pol_effiency_1percent": {"R": 3, "TE": 3},
-                 "beam_2percent_pol_effiency_2percent": {"R": 3, "TE": 2},
-                 "beam_5percent_pol_effiency_3percent": {"R": 0, "TE": 3}}
+  chains = {
+      "no noise": {"joint_TT_R_EE": 2, "joint_TT_TE_EE": 0},
+      "no systematics": {"joint_TT_R_EE": 1, "joint_TT_TE_EE": 0},
+      # "beam_1percent_pol_efficiency_1percent": {"joint_TT_R_EE": 4, "joint_TT_TE_EE": 4},
+      "beam_2percent_pol_efficiency_2percent": {"joint_TT_R_EE": 2, "joint_TT_TE_EE": 1},
+      # "beam_5percent_pol_efficiency_3percent": {"joint_TT_R_EE": 3, "joint_TT_TE_EE": 3}
+  }
 
   cols = [7, 6, 2, 3, 4, 5, -1]
   samples = []
-  for k1, v1 in systematics.items():
-      tmpl_path = r"/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_syst_{}"
-      path = tmpl_path.format(k1) + "/results_{}_666_{}"
+  for k1, v1 in chains.items():
+      if k1 == "no systematics":
+        path = "/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_noise/results_{}_666_{}"
+      elif k1 == "no noise":
+        path = "/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff/results_{}_666_{}"
+      else:
+          tmpl_path = r"/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_noise_syst_{}"
+          path = tmpl_path.format(k1) + "/results_{}_666_{}"
       samples += get_mcmc_samples(path, v1, cols, labels)
-      print(k1, v1, samples[-2].getMeans())
-      print(k1, v1, samples[-1].getMeans())
+      # print(k1, v1, samples[0].samples[:, :-2])
+      # print(k1, v1, samples[-1].getMeans())
+#+END_SRC
 
+Triangle plot
+#+BEGIN_SRC ipython :session :results raw drawer
   g = plots.getSubplotPlotter()
-  g.settings.lineM = ["-C0", "--C0", "-C1", "--C1", "-C2", "--C2"]
-  g.triangle_plot(samples, legend_labels=[])
-  g.add_legend(["1% beam - 1% efficiency", "", "2% beam - 2% efficiency", "", "5% beam - 3% efficiency"],
-               colored_text=True, figure=True, align_right=True)
+  g.settings.lineM = ["-gray", "--gray"]
+  for i in range(4):
+      g.settings.lineM += ["-C{}".format(i), "--C{}".format(i)]
+  g.triangle_plot(samples, labels[:-1], legend_labels=[])
+  # Add special legend
+  ax = g.subplots[0, 0]
+  from matplotlib.lines import Line2D
+  leg = ax.legend(5*[Line2D([], [], lw=0)] + [Line2D([], [], color="k", ls="-"), Line2D([], [], color="k", ls="--")],
+                  ["no noise", "no systematics", "1% beam - 1% efficiency", "2% beam - 2% efficiency", "5% beam - 3% efficiency",
+                   r"joint fit $(TT, \mathcal{R}^{TE}, EE)$", "joint fit $(TT, TE, EE)$"],
+                  loc="upper left", bbox_to_anchor=(2,1), fontsize="large", ncol=1)
+  for i, t in enumerate(leg.texts[:-2]):
+    t.set_color("gray") if i == 0 else t.set_color("C{}".format(i-1))
+  # g.add_legend(["1% beam - 1% efficiency", "", "2% beam - 2% efficiency", "", "5% beam - 3% efficiency"],
+  #              colored_text=True, figure=True, align_right=True)
 
   # Show prior on tau
   ax = g.subplots[-1, -1]
   xmin, xmax, ymin, ymax = ax.axis()
   x = np.linspace(xmin, xmax, 100)
   from scipy.stats import norm
-  ax.plot(x, 0.018*norm.pdf(x, 0.054, 0.0073), color='gray', ls='--')
+  ax.plot(x, 0.018*norm.pdf(x, 0.054, 0.0073), color='gray', ls='--', label=r"$\tau$ prior")
+  ax.legend(loc="upper left", bbox_to_anchor=(1,1))
 
   ref = [67.36, np.exp(3.044)/1e10, 0.9649, 0.02237, 0.1200, 0.0544]
   show_ref(g, ref)
@@ -358,8 +702,258 @@
 
 #+RESULTS:
 :results:
-# Out[6]:
-[[file:./obipy-resources/D83RoT.png]]
+# Out[154]:
+[[file:./obipy-resources/ULbZBa.png]]
+:end:
+
+#+BEGIN_SRC ipython :session :results raw drawer
+  g = plots.getSinglePlotter()
+  g.settings.lineM = ["-gray", "--gray"]
+  for i in range(4):
+      g.settings.lineM += ["-C{}".format(i), "--C{}".format(i)]
+  g.plot_1d(samples, "$\chi^2$")
+  ax = g.fig.axes[-1]
+  ax.set_xscale("log")
+  leg = ax.legend(5*[Line2D([], [], lw=0)] + [Line2D([], [], color="k", ls="-"), Line2D([], [], color="k", ls="--")],
+                  ["no noise", "no systematics", "1% beam - 1% efficiency", "2% beam - 2% efficiency", "5% beam - 3% efficiency",
+                   r"joint fit $(TT, \mathcal{R}^{TE}, EE)$", "joint fit $(TT, TE, EE)$"],
+                  loc="upper left", bbox_to_anchor=(1,1), fontsize="large", ncol=1, markerfirst=False)
+  for i, t in enumerate(leg.texts[:-2]):
+    t.set_color("gray") if i == 0 else t.set_color("C{}".format(i-1))
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[148]:
+[[file:./obipy-resources/H90Y9f.png]]
+:end:
+
+#+BEGIN_SRC ipython :session :results raw drawer
+  from copy import deepcopy
+  best_fits = deepcopy(systematics)
+  i = 0
+  for k1, v1 in systematics.items():
+      for k2, v2 in v1.items():
+          sample = samples[i].samples
+          best_fit = sample[np.argmin(samples[-1])]
+          best_fits[k1][k2] = {"chain": v2, "chi2": best_fit[-1], "pars": best_fit[:-1]}
+          i+=1
+  print(best_fits)
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[219]:
+:end:
+
+** MCMC for binned vs unbinned TT,TE,EE
+Load samples
+#+BEGIN_SRC ipython :session :results none
+  labels = [r"$H_0~[\mathrm{km/s}]$",
+            r"$A_\mathrm{s}$",
+            r"$n_\mathrm{s}$",
+            r"$\Omega_\mathrm{b}h^2$",
+            r"$\Omega_\mathrm{c}h^2$",
+            r"$\tau$" ,
+            r"$\chi^2$"
+  ]
+  # r"$\Delta\mathrm{A}_\mathrm{L}$"]
+
+  chains = {
+      "no noise": {"joint_TT_TE_EE": 2},
+      "no noise (unbinned)": {"joint_TT_TE_EE": 0},
+      "no systematics": {"joint_TT_TE_EE": 0},
+      "no systematics (unbinned)": {"joint_TT_TE_EE": 3},
+      "beam_1percent_pol_efficiency_1percent": {"joint_TT_TE_EE": 4},
+      "beam_1percent_pol_efficiency_1percent (unbinned)": {"joint_TT_TE_EE": 3},
+      "beam_2percent_pol_efficiency_2percent": {"joint_TT_TE_EE": 2},
+      "beam_2percent_pol_efficiency_2percent (unbinned)": {"joint_TT_TE_EE": 3},
+      "beam_5percent_pol_efficiency_3percent": {"joint_TT_TE_EE": 3},
+      "beam_5percent_pol_efficiency_3percent (unbinned)": {"joint_TT_TE_EE": 1}
+  }
+
+  cols = [7, 6, 2, 3, 4, 5, -1]
+  samples = []
+  for k1, v1 in chains.items():
+      output_path = r"/home/garrido/Workdir/CMB/analysis/corrcoeff/output/"
+      if "unbinned" in k1:
+        output_path += "mcmc_corrcoeff_unbinned"
+        k1 = k1.replace(" (unbinned)","")
+      else:
+        output_path += "mcmc_corrcoeff"
+
+      if k1 == "no noise":
+        path = output_path + r"/results_{}_666_{}"
+      elif k1 == "no systematics":
+        path = output_path + r"_noise/results_{}_666_{}"
+      else:
+          tmpl_path = output_path + r"_noise_syst_{}"
+          path = tmpl_path.format(k1) + r"/results_{}_666_{}"
+      samples += get_mcmc_samples(path, v1, cols, labels)
+      # print(k1, v1, samples[0].samples[:, :-2])
+      # print(k1, v1, samples[-1].getMeans())
+#+END_SRC
+
+Triangle plot
+#+BEGIN_SRC ipython :session :results raw drawer
+  g = plots.getSubplotPlotter()
+  g.settings.lineM = ["-gray", "--gray"]
+  for i in range(4):
+      g.settings.lineM += ["-C{}".format(i), "--C{}".format(i)]
+  g.triangle_plot(samples, labels[:-1], legend_labels=[])
+  # Add special legend
+  ax = g.subplots[0, 0]
+  from matplotlib.lines import Line2D
+  leg = ax.legend(5*[Line2D([], [], lw=0)] + [Line2D([], [], color="k", ls="-"), Line2D([], [], color="k", ls="--")],
+                  ["no noise", "no systematics", "1% beam - 1% efficiency", "2% beam - 2% efficiency", "5% beam - 3% efficiency",
+                   r"binned joint fit $(TT, TE, EE)$", r"unbinned joint fit $(TT, TE, EE)$"],
+                  loc="upper left", bbox_to_anchor=(2,1), fontsize="large", ncol=1)
+  for i, t in enumerate(leg.texts[:-2]):
+    t.set_color("gray") if i == 0 else t.set_color("C{}".format(i-1))
+  # g.add_legend(["1% beam - 1% efficiency", "", "2% beam - 2% efficiency", "", "5% beam - 3% efficiency"],
+  #              colored_text=True, figure=True, align_right=True)
+
+  # Show prior on tau
+  ax = g.subplots[-1, -1]
+  xmin, xmax, ymin, ymax = ax.axis()
+  x = np.linspace(xmin, xmax, 100)
+  from scipy.stats import norm
+  ax.plot(x, 0.018*norm.pdf(x, 0.054, 0.0073), color='gray', ls='--', label=r"$\tau$ prior")
+  ax.legend(loc="upper left", bbox_to_anchor=(1,1))
+
+  ref = [67.36, np.exp(3.044)/1e10, 0.9649, 0.02237, 0.1200, 0.0544]
+  show_ref(g, ref)
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[177]:
+[[file:./obipy-resources/Eqrvit.png]]
+:end:
+
+#+BEGIN_SRC ipython :session :results raw drawer
+  g = plots.getSubplotPlotter(width_inch=8)
+  g.settings.lineM = ["-gray", "--gray"]
+  for i in range(4):
+      g.settings.lineM += ["-C{}".format(i), "--C{}".format(i)]
+  g.plots_1d(samples, labels[0:-1], legend_labels=[], nx=2)
+  ax = g.subplots[0, -1]
+  leg = ax.legend(5*[Line2D([], [], lw=0)] + [Line2D([], [], color="k", ls="-"), Line2D([], [], color="k", ls="--")],
+                  ["no noise", "no systematics", "1% beam - 1% efficiency", "2% beam - 2% efficiency", "5% beam - 3% efficiency",
+                   r"binned joint fit $(TT, TE, EE)$", r"unbinned joint fit $(TT, TE, EE)$"],
+                  loc="upper left", bbox_to_anchor=(1,1), fontsize="large", ncol=1, markerfirst=False)
+  for i, t in enumerate(leg.texts[:-2]):
+    t.set_color("gray") if i == 0 else t.set_color("C{}".format(i-1))
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[221]:
+[[file:./obipy-resources/zD0lpT.png]]
+:end:
+
+** MCMC for unbinned TT,TE,EE and systematics
+Load samples
+#+BEGIN_SRC ipython :session :results none
+  labels = [r"$H_0~[\mathrm{km/s}]$",
+            r"$A_\mathrm{s}$",
+            r"$n_\mathrm{s}$",
+            r"$\Omega_\mathrm{b}h^2$",
+            r"$\Omega_\mathrm{c}h^2$",
+            r"$\tau$" ,
+            r"$\chi^2$"
+  ]
+
+  output_path = "/home/garrido/Workdir/CMB/analysis/corrcoeff/output/"
+  chains = {
+      "no systematics": output_path + "mcmc_corrcoeff_unbinned_noise/results_joint_TT_TE_EE_666_[0-4]",
+      "5% beam - 3% efficiency": output_path + "mcmc_corrcoeff_unbinned_noise_syst_beam_5percent_pol_efficiency_3percent/results_joint_TT_TE_EE_666_[0-4]",
+      "5% beam - 0% efficiency": output_path + "mcmc_corrcoeff_unbinned_noise_syst_beam_5percent_pol_efficiency_0percent/results_joint_TT_TE_EE_666_[0-4]",
+      "0% beam - 3% efficiency": output_path + "mcmc_corrcoeff_unbinned_noise_syst_beam_0percent_pol_efficiency_3percent/results_joint_TT_TE_EE_666_[0-4]"
+  }
+
+  cols = [7, 6, 2, 3, 4, 5, -1]
+  samples = [get_mcmc_samples(path, cols=cols, labels=labels) for path in chains.values()]
+#+END_SRC
+
+Triangle plot
+#+BEGIN_SRC ipython :session :results raw drawer
+  g = plots.getSubplotPlotter()
+  g.settings.lineM = ["-C0", "-C3", "-C9", "-C6"]
+  g.triangle_plot(samples, labels[:-1], legend_labels=[])
+  # Add special legend
+  ax = g.subplots[0, 0]
+  from matplotlib.lines import Line2D
+  leg = ax.legend(len(chains)*[Line2D([], [], lw=0)], chains.keys(),
+                  loc="upper left", bbox_to_anchor=(2,1), fontsize="large", ncol=1)
+  for i, t in enumerate(leg.texts):
+    t.set_color(g.settings.lineM[i].strip("-"))
+
+  # Show prior on tau
+  ax = g.subplots[-1, -1]
+  xmin, xmax, ymin, ymax = ax.axis()
+  x = np.linspace(xmin, xmax, 100)
+  from scipy.stats import norm
+  ax.plot(x, 0.018*norm.pdf(x, 0.054, 0.0073), color='gray', ls='--', label=r"$\tau$ prior")
+  ax.legend(loc="upper left", bbox_to_anchor=(1,1))
+
+  ref = [67.36, np.exp(3.044)/1e10, 0.9649, 0.02237, 0.1200, 0.0544]
+  show_ref(g, ref)
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[70]:
+[[file:./obipy-resources/lA8e7M.png]]
+:end:
+
+*** Compare spectra
+#+BEGIN_SRC ipython :session :results raw drawer
+  import pickle
+
+  output_path = "/home/garrido/Workdir/CMB/analysis/corrcoeff/output/"
+  # No systematics
+  d = pickle.load(open(output_path + "mcmc_corrcoeff_noise/results_joint_TT_TE_EE_666_1/setup.pkl", "rb"))
+  ls = d["setup"]["simulation"]["ls"]
+  Cls_no_syst = d["setup"]["simulation"]["Cl"]
+  # 5% - 3%
+  d = pickle.load(open(output_path + "mcmc_corrcoeff_noise_syst_beam_5percent_pol_efficiency_3percent/results_joint_TT_TE_EE_666_1/setup.pkl", "rb"))
+  Cls_5percent_3percent = d["setup"]["simulation"]["Cl"]
+  # 5% - 0%
+  d = pickle.load(open(output_path + "mcmc_corrcoeff_noise_syst_beam_5percent_pol_efficiency_0percent/results_joint_TT_TE_EE_666_1/setup.pkl", "rb"))
+  Cls_5percent_0percent = d["setup"]["simulation"]["Cl"]
+  # 0% - 3%
+  d = pickle.load(open(output_path + "mcmc_corrcoeff_noise_syst_beam_0percent_pol_efficiency_3percent/results_joint_TT_TE_EE_666_3/setup.pkl", "rb"))
+  Cls_0percent_3percent = d["setup"]["simulation"]["Cl"]
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[2]:
+:end:
+
+#+BEGIN_SRC ipython :session :results raw drawer
+  i = 1 #0: TT, 1: TE, 2: EE
+  plt.figure(figsize=(9,6))
+  grid = plt.GridSpec(4, 1, hspace=0, wspace=0)
+  main = plt.subplot(grid[0:3], xticklabels=[])
+  fac = ls*(ls+1)/(2*np.pi)
+  main.plot(ls, Cls_no_syst[i]*fac, label="no systematics")
+  main.plot(ls, Cls_5percent_3percent[i]*fac, "oC3", label="5% beam - 3% efficiency")
+  main.plot(ls, Cls_5percent_0percent[i]*fac, "oC9", label="5% beam - 0% efficiency")
+  main.plot(ls, Cls_0percent_3percent[i]*fac, "oC6", label="0% beam - 3% efficiency")
+  dev = plt.subplot(grid[-1])
+  dev.plot(ls, Cls_5percent_3percent[i]/Cls_no_syst[i]-1, "oC3")
+  dev.plot(ls, Cls_5percent_0percent[i]/Cls_no_syst[i]-1, "oC9")
+  dev.plot(ls, Cls_0percent_3percent[i]/Cls_no_syst[i]-1, "oC6")
+  main.legend(bbox_to_anchor=(1,1))
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[19]:
+: <matplotlib.legend.Legend at 0x7fda53d047d0>
+[[file:./obipy-resources/O7nFME.png]]
 :end:
 
 * Residuals
@@ -379,36 +973,6 @@
               "beam_5percent_pol_effiency_3percent":
               {"R":  {"chi2": 2931.5888, "pars": np.array([6.6950859e+01, 2.0940361e-09, 9.6741873e-01, 2.2275347e-02,1.2098295e-01, 5.8618206e-02])},
                "TE": {"chi2": 2932.4420, "pars": np.array([6.6689252e+01, 2.0306725e-09, 9.5449374e-01, 2.2191995e-02,1.2149131e-01, 5.4631719e-02])}}}
-/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_syst_beam_1percent_pol_effiency_1percent/results_R_666_3/mcmc_1.txt
-Removed 0.4 as burn in
-Removed no burn in
-/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_syst_beam_1percent_pol_effiency_1percent/results_TE_666_3/mcmc_1.txt
-Removed 0.4 as burn in
-Removed no burn in
-beam_1percent_pol_effiency_1percent {'R': 3, 'TE': 3} [6.70020447e+01 2.09531840e-09 9.70032193e-01 2.22849810e-02
- 1.20864696e-01 5.47302912e-02 2.93643925e+03]
-beam_1percent_pol_effiency_1percent {'R': 3, 'TE': 3} [6.69286373e+01 2.08396733e-09 9.64079413e-01 2.23092075e-02
- 1.21125689e-01 5.52719972e-02 2.93652989e+03]
-/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_syst_beam_2percent_pol_effiency_2percent/results_R_666_3/mcmc_1.txt
-Removed 0.4 as burn in
-Removed no burn in
-/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_syst_beam_2percent_pol_effiency_2percent/results_TE_666_2/mcmc_1.txt
-Removed 0.4 as burn in
-Removed no burn in
-beam_2percent_pol_effiency_2percent {'R': 3, 'TE': 2} [6.70000699e+01 2.09470083e-09 9.70218674e-01 2.22852699e-02
- 1.20868316e-01 5.48737286e-02 2.93641168e+03]
-beam_2percent_pol_effiency_2percent {'R': 3, 'TE': 2} [6.68410854e+01 2.06508362e-09 9.61217445e-01 2.22754933e-02
- 1.21289232e-01 5.61711064e-02 2.93644701e+03]
-/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_syst_beam_5percent_pol_effiency_3percent/results_R_666_0/mcmc_1.txt
-Removed 0.4 as burn in
-Removed no burn in
-/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_syst_beam_5percent_pol_effiency_3percent/results_TE_666_3/mcmc_1.txt
-Removed 0.4 as burn in
-Removed no burn in
-beam_5percent_pol_effiency_3percent {'R': 0, 'TE': 3} [6.69855787e+01 2.09272810e-09 9.68899486e-01 2.22824496e-02
- 1.20903293e-01 5.42341895e-02 2.93647763e+03]
-beam_5percent_pol_effiency_3percent {'R': 0, 'TE': 3} [6.68112314e+01 2.03930010e-09 9.54100212e-01 2.21947473e-02
- 1.21208497e-01 5.66346190e-02 2.93749588e+03]
 #+END_SRC
 
 #+RESULTS:
@@ -434,7 +998,6 @@ beam_5percent_pol_effiency_3percent {'R': 0, 'TE': 3} [6.68112314e+01 2.03930010
   Cl_te = Cls["te"][lmin:lmax]
   Cl_ee = Cls["ee"][lmin:lmax]
 #+END_SRC
-
 
 ** Get residuals
 #+BEGIN_SRC ipython :session venv :results raw drawer

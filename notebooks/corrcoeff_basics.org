@@ -254,6 +254,7 @@ plt.plot(l, (Cl_te-Cl_obs)/np.sqrt(covmat), ".")
 
   modes = ["baseline", "goal"]
   N_TT, N_EE = {}, {}
+  experiment["freq"] = experiment["freq_all"]
   for i, m in enumerate(modes):
     experiment["sensitivity_mode"] = i+1
     N_TT[m], N_EE[m] = utils.get_noise(experiment)
@@ -303,9 +304,9 @@ plt.plot(l, (Cl_te-Cl_obs)/np.sqrt(covmat), ".")
 
 #+RESULTS:
 :results:
-# Out[25]:
-: <matplotlib.legend.Legend at 0x7f6d46409650>
-[[file:./obipy-resources/JwyqWq.png]]
+# Out[5]:
+: <matplotlib.legend.Legend at 0x7f9f8b021710>
+[[file:./obipy-resources/yObKw0.png]]
 :end:
 
 * Fisher matrix for joint analysis
