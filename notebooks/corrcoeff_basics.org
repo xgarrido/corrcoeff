@@ -234,7 +234,7 @@ plt.plot(l, (Cl_te-Cl_obs)/np.sqrt(covmat), ".")
   import numpy as np
   import yaml
   with open("../yaml/corrcoeff.yaml", "r") as stream:
-      setup = yaml.load(stream)
+      setup = yaml.load(stream, Loader=yaml.FullLoader)
 
   # Get experiment setup
   experiment = setup["experiment"]
@@ -243,23 +243,30 @@ plt.plot(l, (Cl_te-Cl_obs)/np.sqrt(covmat), ".")
   experiment["lmin"] = lmin
   experiment["lmax"] = lmax
   ells = np.arange(lmin, lmax)
+#+END_SRC
 
-
+Get SO noise
+#+BEGIN_SRC ipython :session venv :results none
   from corrcoeff import utils
-  Cls = utils.get_theory_cls(setup, lmax)
-  ls = np.arange(lmin, lmax)
-  Cl_TT = Cls["tt"][lmin:lmax]
-  Cl_TE = Cls["te"][lmin:lmax]
-  Cl_EE = Cls["ee"][lmin:lmax]
-
   modes = ["baseline", "goal"]
+  experiment["use"] = "SO"
+  SO = experiment["SO"]
+  SO["freq"] = SO["freq_all"]
   N_TT, N_EE = {}, {}
-  experiment["freq"] = experiment["freq_all"]
   for i, m in enumerate(modes):
-    experiment["sensitivity_mode"] = i+1
+    SO["sensitivity_mode"] = i+1
     N_TT[m], N_EE[m] = utils.get_noise(experiment)
 #+END_SRC
 
+Compute Cls for comparison
+#+BEGIN_SRC ipython :session venv :results none
+  Cls = utils.get_theory_cls(setup, lmax)
+  Cl_TT = Cls["tt"][lmin:lmax]
+  Cl_TE = Cls["te"][lmin:lmax]
+  Cl_EE = Cls["ee"][lmin:lmax]
+#+END_SRC
+
+Plot everything together
 #+BEGIN_SRC ipython :session venv :results raw drawer
   import matplotlib.pyplot as plt
   %matplotlib inline
@@ -274,14 +281,14 @@ plt.plot(l, (Cl_te-Cl_obs)/np.sqrt(covmat), ".")
   TT.semilogy()
   TT.plot([], [], c="gray", ls="-", label="baseline")
   TT.plot([], [], c="gray", ls="--", label="goal")
-  TT.plot(ls, norm*Cl_TT, "k", label="Lensed CMB TT")
+  TT.plot(ells, norm*Cl_TT, "k", label="Lensed CMB TT")
   EE = plt.subplot(grid[1])
   EE.semilogy()
   EE.plot([], [], c="gray", ls="-", label="baseline")
   EE.plot([], [], c="gray", ls="--", label="goal")
-  EE.plot(ls, norm*Cl_EE, "k", label="Lensed CMB EE")
+  EE.plot(ells, norm*Cl_EE, "k", label="Lensed CMB EE")
 
-  freqs = experiment["freq_all"]
+  freqs = experiment["SO"]["freq_all"]
   for i, f in enumerate(freqs):
     TT.plot(ells, norm*N_TT["baseline"][i], "-C{}".format(i), label="{} GHz".format(f))
     TT.plot(ells, norm*N_TT["goal"][i], "--C{}".format(i))
@@ -304,9 +311,55 @@ plt.plot(l, (Cl_te-Cl_obs)/np.sqrt(covmat), ".")
 
 #+RESULTS:
 :results:
-# Out[5]:
-: <matplotlib.legend.Legend at 0x7f9f8b021710>
-[[file:./obipy-resources/yObKw0.png]]
+# Out[4]:
+: <matplotlib.legend.Legend at 0x7fa12c49d0d0>
+[[file:./obipy-resources/dpzqcX.png]]
+:end:
+
+Get Planck noise
+#+BEGIN_SRC ipython :session venv :results none
+  from corrcoeff import utils
+  experiment["use"] = "Planck"
+  N_TT_pla, N_EE_pla = utils.get_noise(experiment)
+#+END_SRC
+
+#+BEGIN_SRC ipython :session venv :results raw drawer
+  plt.figure(figsize=(8,14))
+  grid = plt.GridSpec(2, 1, hspace=0.25, wspace=0)
+
+  norm = ells*(ells+1)/(2*np.pi)
+
+  TT = plt.subplot(grid[0])
+  TT.semilogy()
+  TT.plot(ells, norm*Cl_TT, "k", label="Lensed CMB TT")
+  EE = plt.subplot(grid[1])
+  EE.semilogy()
+  EE.plot(ells, norm*Cl_EE, "k", label="Lensed CMB EE")
+
+  for i, f in enumerate([100, 143, 217]):
+    TT.plot(ells, norm*N_TT_pla[i], "-C{}".format(i), label="Planck {} GHz".format(f))
+    EE.plot(ells, norm*N_EE_pla[i], "-C{}".format(i), label="Planck {} GHz".format(f))
+  for i, f in enumerate([93, 145, 225]):
+    TT.plot(ells, norm*N_TT["baseline"][i+2], "--C{}".format(i), label="SO {} GHz".format(f))
+    EE.plot(ells, norm*N_EE["baseline"][i+2], "--C{}".format(i), label="SO {} GHz".format(f))
+
+  TT.set_ylim(1, 10**5)
+  TT.set_xlim(lmin, lmax)
+  TT.set_ylabel("$\ell(\ell+1)C_\ell/(2\pi)~[\mu\mathrm{K}^2]$")
+  TT.set_xlabel("Multipole $\ell$")
+  TT.legend(loc="upper left", bbox_to_anchor=(1,1))
+  EE.set_ylim(10**-2, 10**5)
+  EE.set_xlim(lmin, lmax)
+  EE.set_ylabel("$\ell(\ell+1)C_\ell/(2\pi)~[\mu\mathrm{K}^2]$")
+  EE.set_xlabel("Multipole $\ell$")
+  EE.legend(loc="upper left", bbox_to_anchor=(1,1))
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[23]:
+: <matplotlib.legend.Legend at 0x7fa1232e7250>
+[[file:./obipy-resources/PUdBt4.png]]
 :end:
 
 * Fisher matrix for joint analysis
@@ -456,3 +509,54 @@ deriv.shape, inv_C.shape
   | ns            |    0.9649 |  0.0023879663777635067 |
   | ombh2         |   0.02237 |  5.447897047605741e-05 |
   | omch2         |    0.1212 |  0.0006342926186782754 |
+* Test new parameter a_pol
+#+BEGIN_SRC ipython :session venv :results none
+  import numpy as np
+  import matplotlib.pyplot as plt
+  %matplotlib inline
+#+END_SRC
+
+#+BEGIN_SRC ipython :session venv :results none
+  params = {
+      "ombh2": 0.022, "omch2": 0.122, "H0": 67.5, "tau": 0.06,
+      "As": 2e-9, "ns": 0.965, "a_pol": 1.0}
+  info = {
+      "params": params,
+      "likelihood": {"one": None},
+      "theory": {"camb": None}
+  }
+#+END_SRC
+
+#+BEGIN_SRC ipython :session venv :results none
+  from cobaya.model import get_model
+  camb_model = get_model(info)
+  lmin, lmax = 2, 3000
+  ls = np.arange(lmin, lmax)
+  camb_model.likelihood.theory.needs(Cl={"tt": lmax, "te": lmax, "ee": lmax})
+  camb_model.logposterior({})
+  Dls_ref = camb_model.likelihood.theory.get_Cl(ell_factor=False)
+#+END_SRC
+
+Plot spectra for different values of a_pol
+#+BEGIN_SRC ipython :session venv :results raw drawer
+  fig, ax = plt.subplots(3, 1, sharex="col", figsize=(8,6))
+  for a_pol in np.linspace(0.9, 1.1, 10):
+      info["params"]["a_pol"] = a_pol
+      camb_model = get_model(info)
+      camb_model.likelihood.theory.needs(Cl={"tt": lmax, "te": lmax, "ee": lmax})
+      camb_model.logposterior({})
+      Dls = camb_model.likelihood.theory.get_Cl(ell_factor=False)
+      for i, s in enumerate(["tt", "te", "ee"]):
+          ax[i].plot(ls, Dls[s][lmin:lmax]/Dls_ref[s][lmin:lmax])
+  ax[-1].set_xlabel("Multipole $\ell$")
+  ax[0].set_ylabel("$TT$")
+  ax[1].set_ylabel("$TE$")
+  ax[2].set_ylabel("$EE$")
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[17]:
+: Text(0, 0.5, '$EE$')
+[[file:./obipy-resources/Jft6WJ.png]]
+:end:
