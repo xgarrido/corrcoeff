@@ -39,6 +39,7 @@ def simulation(setup):
         N_TT = np.full_like(ls, 0.0)
         N_EE = np.full_like(ls, 0.0)
 
+
     if delta:
         ls = utils.bin_array(ls, delta)
         Cl_TT = utils.bin_array(Cl_TT, delta)
@@ -257,6 +258,9 @@ def main():
         updated_info, results = sampling(setup)
         setup.update({"results": results})
 
+    # Store configuration & results
+    store(setup)
+
     # Do the MCMC
     if args.do_mcmc:
         # Update cobaya setup
@@ -281,9 +285,6 @@ def main():
         setup["cobaya"]["sampler"] = mcmc_dict
         setup["cobaya"]["output"] = args.output_base_dir + "/mcmc"
         updated_info, results = sampling(setup)
-
-    # Store configuration & results
-    store(setup)
 
 # script:
 if __name__ == "__main__":

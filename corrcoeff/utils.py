@@ -6,13 +6,27 @@ def bin_array(a, delta):
 def get_noise(setup):
     lmin, lmax = setup["lmin"], setup["lmax"]
     fsky = setup["fsky"]
-    sensitivity_mode = setup["sensitivity_mode"]
-    from corrcoeff import V3calc as V3
-    ell, N_ell_T_LA, N_ell_P_LA, Map_white_noise_levels \
-        = V3.Simons_Observatory_V3_LA_noise(sensitivity_mode, fsky, lmin, lmax, delta_ell=1, apply_beam_correction=True)
-    # Keep only relevant rows
-    idx = np.intersect1d(setup["freq"], setup["freq_all"], return_indices=True)[-1]
-    return N_ell_T_LA[idx], N_ell_P_LA[idx]
+    use = setup["use"]
+    if use == "SO":
+        sensitivity_mode = setup[use]["sensitivity_mode"]
+        from corrcoeff import V3calc as V3
+        ell, N_ell_T_LA, N_ell_P_LA, Map_white_noise_levels \
+            = V3.Simons_Observatory_V3_LA_noise(sensitivity_mode, fsky, lmin, lmax, delta_ell=1, apply_beam_correction=True)
+        # Keep only relevant rows
+        idx = np.intersect1d(setup[use]["freq"], setup[use]["freq_all"], return_indices=True)[-1]
+        return N_ell_T_LA[idx], N_ell_P_LA[idx]
+    elif use == "Planck":
+        l = np.arange(lmin, lmax)
+        beam_FWHM = np.array(setup[use]["beam_th"])
+        beam = np.deg2rad(beam_FWHM)/60/np.sqrt(8*np.log(2))
+        gaussian_beam = np.exp(l*(l+1)*beam[:, None]**2)
+        sigma_th_temp = np.deg2rad(np.array(setup[use]["sigma_th_temp"]))/60
+        sigma_th_polar = np.deg2rad(np.array(setup[use]["sigma_th_polar"]))/60
+        N_ell_T = sigma_th_temp[:, None]**2*gaussian_beam
+        N_ell_P = sigma_th_polar[:, None]**2*gaussian_beam
+        return N_ell_T, N_ell_P
+    else:
+        raise ValueError("Unkown experiment '{}".format(use))
 
 def get_systematics(setup):
     lmin, lmax = setup["lmin"], setup["lmax"]

@@ -24,13 +24,21 @@ experiment:
     beam: 5%
     polar: 3%
 
-  # Simons Observatory sensitivity mode
-  sensitivity_mode: 1 #  1: baseline, 2: goal
+  use: Planck
+  SO:
+    # Simons Observatory sensitivity mode
+    sensitivity_mode: 1 #  1: baseline, 2: goal
 
-  # SO frequencies
-  freq_all: [27, 39, 93, 145, 225, 280] # GHz
-  freq: [93, 145, 225] # GHz
+    # SO frequencies
+    freq_all: [27, 39, 93, 145, 225, 280] # GHz
+    freq: [93, 145, 225] # GHz
 
+  Planck:
+    freq: [100, 143, 217] # GHz
+
+    beam_th: [9.66, 7.22, 4.90]
+    sigma_th_temp: [77.4, 33.0, 46.8]
+    sigma_th_polar: [117.6, 70.2, 105.0]
 
 # Cobaya setup
 cobaya:
