@@ -23,6 +23,9 @@ experiment:
   systematics:
     beam: 5%
     polar: 3%
+    TF:
+      min_T: 0.7
+      lmax_T: 400
 
   use: Planck
   SO:
