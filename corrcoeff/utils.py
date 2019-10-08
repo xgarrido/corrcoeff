@@ -41,8 +41,9 @@ def get_systematics(setup):
                 return float(str.strip("%").strip()) / 100
             raise Exception("Don't know how to parse %s" % str)
 
-    syst_beam = 1 - _parse(setup["systematics"]["beam"])
-    syst_polar = 1 - _parse(setup["systematics"]["polar"])
+    systematics = setup["systematics"]
+    syst_beam = 1 - _parse(systematics.get("beam", 0.0))
+    syst_polar = 1 - _parse(systematics.get("polar", 0.0))
 
     FWHM_fid= 1.5
     beam_FWHM_rad_fid = np.deg2rad(FWHM_fid)/60
@@ -54,9 +55,16 @@ def get_systematics(setup):
 
     syst_beam = (bl_fid/bl_syst)**2
 
-    TT_syst = syst_beam
-    TE_syst = syst_beam*syst_polar
-    EE_syst = syst_beam*syst_polar**2
+    # Transfer function TF[T, E]
+    min_TF = np.array([[systematics.get("TF").get("min_T", 1.0)],
+                       [systematics.get("TF").get("min_E", 1.0)]])
+    lmax = np.array([[systematics.get("TF").get("lmax_T", 0)],
+                     [systematics.get("TF").get("lmax_E", 0)]])
+    TF = np.where(l < lmax, min_TF + (1 - min_TF)*(np.cos((lmax - l)/(lmax - 2)*np.pi/2))**2, 1.0)
+
+    TT_syst = syst_beam*TF[0]**2
+    TE_syst = syst_beam*syst_polar*TF[0]*TF[1]
+    EE_syst = syst_beam*syst_polar**2*TF[1]**2
 
     return TT_syst, TE_syst, EE_syst
 
