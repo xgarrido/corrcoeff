@@ -488,12 +488,9 @@
 :end:
 
 *** 0% beam + 3% efficiency
-#+BEGIN_SRC ipython :session :results none
-  result_path = r"/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_unbinned_noise_syst_beam_0percent_pol_efficiency_3percent"
-#+END_SRC
-
-**** TT_TE_EE
+**** TT_TE_EE for SO
 #+BEGIN_SRC ipython :session :results raw drawer
+  result_path = r"/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_unbinned_noise_syst_beam_0percent_pol_efficiency_3percent"
   plot_chains(result_path + "/*_TT_TE_EE_*666*/mcmc*.txt", burnin=0, labels=labels)
 #+END_SRC
 
@@ -503,6 +500,18 @@
 [[file:./obipy-resources/P9dN0w.png]]
 :end:
 
+**** TT_TE_EE for Planck
+#+BEGIN_SRC ipython :session :results raw drawer
+  result_path = r"/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_unbinned_planck_noise_syst_beam_0percent_pol_efficiency_3percent"
+  # result_path = r"/home/garrido/Workdir/CMB/analysis/corrcoeff/output/mcmc_corrcoeff_unbinned_planck_noise"
+  plot_chains(result_path + "/*_TT_TE_EE_*44*/mcmc*.txt", burnin=0, labels=labels)
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[11]:
+[[file:./obipy-resources/mMT92H.png]]
+:end:
 
 * MCMC distributions
 
@@ -853,7 +862,7 @@ Triangle plot
 [[file:./obipy-resources/zD0lpT.png]]
 :end:
 
-** MCMC for unbinned TT,TE,EE and systematics
+** MCMC for unbinned TT,TE,EE and systematics for SO
 Load samples
 #+BEGIN_SRC ipython :session :results none
   labels = [r"$H_0~[\mathrm{km/s}]$",
@@ -1010,6 +1019,168 @@ Triangle plot
 # Out[33]:
 :end:
 
+** MCMC for unbinned TT,TE,EE and systematics for Planck
+Load samples
+#+BEGIN_SRC ipython :session :results none
+  labels = [r"$H_0~[\mathrm{km/s}]$",
+            r"$A_\mathrm{s}$",
+            r"$n_\mathrm{s}$",
+            r"$\Omega_\mathrm{b}h^2$",
+            r"$\Omega_\mathrm{c}h^2$",
+            r"$\tau$" ,
+            r"$\chi^2$"
+  ]
+
+  output_path = "/home/garrido/Workdir/CMB/analysis/corrcoeff/output/"
+  chains = {
+      "Planck - no systematics": output_path + "mcmc_corrcoeff_unbinned_planck_noise/results_joint_TT_TE_EE_44_[0-4]",
+      "Planck - 0% beam - 3% efficiency": output_path + "mcmc_corrcoeff_unbinned_planck_noise_syst_beam_0percent_pol_efficiency_3percent/results_joint_TT_TE_EE_44_[0-4]"
+  }
+
+  cols = [7, 6, 2, 3, 4, 5, -1]
+  samples = [get_mcmc_samples(path, cols=cols, labels=labels) for path in chains.values()]
+#+END_SRC
+
+Triangle plot
+#+BEGIN_SRC ipython :session :results raw drawer
+  g = plots.getSubplotPlotter()
+  g.settings.lineM = ["-C{}".format(i) for i in range(10)]
+  g.triangle_plot(samples, labels[:-1], legend_labels=[])
+  # Add special legend
+  ax = g.subplots[0, 0]
+  from matplotlib.lines import Line2D
+  leg = ax.legend(len(chains)*[Line2D([], [], lw=0)], chains.keys(),
+                  loc="upper left", bbox_to_anchor=(2,1), fontsize="large", ncol=1)
+  for i, t in enumerate(leg.texts):
+    t.set_color(g.settings.lineM[i].strip("-"))
+
+  # Show prior on tau
+  ax = g.subplots[-1, -1]
+  xmin, xmax, ymin, ymax = ax.axis()
+  x = np.linspace(xmin, xmax, 100)
+  from scipy.stats import norm
+  ax.plot(x, 0.018*norm.pdf(x, 0.054, 0.0073), color='gray', ls='--', label=r"$\tau$ prior")
+  ax.legend(loc="upper left", bbox_to_anchor=(1,1))
+
+  ref = [67.36, np.exp(3.044)/1e10, 0.9649, 0.02237, 0.1200, 0.0544]
+  show_ref(g, ref)
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[6]:
+[[file:./obipy-resources/y9JZLa.png]]
+:end:
+
+*** Compare \chi^2
+#+BEGIN_SRC ipython :session :results raw drawer
+  g = plots.getSinglePlotter()
+  g.settings.lineM = ["-C0", "-C3", "-C9", "-C6"]
+  g.plot_1d(samples, "$\chi^2$")
+  ax = g.fig.axes[-1]
+  leg = ax.legend(len(chains)*[Line2D([], [], lw=0)], chains.keys(),
+                  loc="upper left", bbox_to_anchor=(1,1), fontsize="large", ncol=1, markerfirst=False)
+  for i, t in enumerate(leg.texts):
+    t.set_color(g.settings.lineM[i].strip("-"))
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[13]:
+[[file:./obipy-resources/gKhaN8.png]]
+:end:
+
+** Putting all together
+Getting all samples
+#+BEGIN_SRC ipython :session :results raw drawer
+  labels = [r"$H_0~[\mathrm{km/s}]$",
+            r"$A_\mathrm{s}$",
+            r"$n_\mathrm{s}$",
+            r"$\Omega_\mathrm{b}h^2$",
+            r"$\Omega_\mathrm{c}h^2$",
+            r"$\tau$"]
+
+  output_path = "/home/garrido/Workdir/CMB/analysis/corrcoeff/output/"
+  chains = {
+      "SO - no systematics": output_path + "mcmc_corrcoeff_unbinned_noise/results_joint_TT_TE_EE_666_[0-4]",
+      "SO - 0% beam - 3% efficiency": output_path + "mcmc_corrcoeff_unbinned_noise_syst_beam_0percent_pol_efficiency_3percent/results_joint_TT_TE_EE_666_[0-4]",
+      "SO - 5% beam - 0% efficiency": output_path + "mcmc_corrcoeff_unbinned_noise_syst_beam_5percent_pol_efficiency_0percent/results_joint_TT_TE_EE_666_[0-4]",
+      "Planck - no systematics": output_path + "mcmc_corrcoeff_unbinned_planck_noise/results_joint_TT_TE_EE_44_[0-4]",
+      "Planck - 0% beam - 3% efficiency": output_path + "mcmc_corrcoeff_unbinned_planck_noise_syst_beam_0percent_pol_efficiency_3percent/results_joint_TT_TE_EE_44_[0-4]"
+  }
+
+  cols = [7, 6, 2, 3, 4, 5]
+  samples = [get_mcmc_samples(path, cols=cols, labels=labels) for path in chains.values()]
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[91]:
+:end:
+
+#+BEGIN_SRC ipython :session :results raw drawer
+  labels = [r"$\Delta{}H_0 [\mathrm{km/s}]$",
+            r"$\Delta{}A_\mathrm{s}$",
+            r"$\Delta{}n_\mathrm{s}$",
+            r"$\Delta\Omega_\mathrm{b}h^2$",
+            r"$\Delta\Omega_\mathrm{c}h^2$",
+            r"$\Delta\tau_\mathrm{reio.}$"]
+  nx = len(labels)
+  ny = 2
+
+  fig, ax = plt.subplots(ny, nx, sharey=True, sharex="col", figsize=(15, 7))
+  plt.subplots_adjust(hspace=0, wspace=0)
+  plt.yticks([])
+  plt.ylim(0, 1.05)
+  for i in range(nx):
+    ax[-1, i].set_xlabel(labels[i])
+  for i, ylabel in enumerate(["beam", "polar."]):
+    ax[i, 0].set_ylabel(ylabel)
+
+  colors = ["-C{}".format(i) for i in range(10)]
+  # labels = ["$\mathcal{R}_\ell^{\mathmr{TE}}$", "Simons Observatory (TT, TE, EE)", "Planck (TT, TE, EE)"]
+  legends = ["Simons Observatory (TT, TE, EE)", "Planck (TT, TE, EE)"]
+
+  # samples = [samples[1].samples - samples[0].getMeans(),
+  #            samples[4].samples - samples[3].getMeans(),
+  #            samples[2].samples - samples[0].getMeans()
+  # ]
+  def _plot_sample(sample, ax, idx):
+    g = plots.getSubplotPlotter()
+    g.plots_1d(MCSamples(samples=sample, names=labels), nx=len(labels))
+    for j in range(nx):
+      line = g.subplots[0, j].get_lines()[0]
+      ax[j].plot(line.get_xdata(), line.get_ydata(), colors[idx], lw=1, label=legends[idx])
+
+  _plot_sample(samples[1].samples - samples[0].getMeans(), ax[1], 0)
+  _plot_sample(samples[4].samples - samples[3].getMeans(), ax[1], 1)
+  _plot_sample(samples[2].samples - samples[0].getMeans(), ax[0], 0)
+  # _plot_sample(samples[4].samples - samples[3].getMeans(), ax[1], 1)
+
+  lims = [[-4, +4], [-7e-11, +7e-11], [-0.025, +0.025], [-0.0015, +0.0015], [-0.012, +0.012], [-0.03, 0.03]]
+  for i, a in enumerate(ax[-1, :]):
+    a.set_xlim(lims[i])
+
+  # leg = ax[0, -1].legend(loc="upper left", bbox_to_anchor=(1,1))
+  # for i, item in enumerate(leg.legendHandles):
+  #   item.set_color(colors[i])
+  # # item.set_visible(False)
+  # #   colors += [item.get_color()]
+  for i, text in enumerate(leg.get_texts()):
+    text.set_color(colors[i])
+
+  # ax = ax[0, -1]
+  # xmin, xmax, ymin, ymax = ax.axis()
+  # x = np.linspace(xmin, xmax, 100)
+  # from scipy.stats import norm
+  # ax.plot(x, 0.018*norm.pdf(x, 0.0, 0.0073), color='gray', ls='--', label=r"$\tau$ prior")
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[100]:
+[[file:./obipy-resources/sksWG3.png]]
+:end:
 
 * Residuals
 ** Emacs config                                                     :noexport:
