@@ -3,18 +3,20 @@ import numpy as np
 def bin_array(a, delta):
     return a.reshape(-1, delta).mean(axis=1)
 
-def get_noise(setup):
+def get_noise(setup, ell_factor=True):
     lmin, lmax = setup["lmin"], setup["lmax"]
-    fsky = setup["fsky"]
+    ls = np.arange(lmin, lmax)
+    ell_factor = ls*(ls+1)/2/np.pi if ell_factor else 1.0
     use = setup["use"]
     if use == "SO":
+        fsky = setup["fsky"]
         sensitivity_mode = setup[use]["sensitivity_mode"]
         from corrcoeff import V3calc as V3
         ell, N_ell_T_LA, N_ell_P_LA, Map_white_noise_levels \
             = V3.Simons_Observatory_V3_LA_noise(sensitivity_mode, fsky, lmin, lmax, delta_ell=1, apply_beam_correction=True)
         # Keep only relevant rows
         idx = np.intersect1d(setup[use]["freq"], setup[use]["freq_all"], return_indices=True)[-1]
-        return N_ell_T_LA[idx], N_ell_P_LA[idx]
+        return ell_factor*N_ell_T_LA[idx], ell_factor*N_ell_P_LA[idx]
     elif use == "Planck":
         l = np.arange(lmin, lmax)
         beam_FWHM = np.array(setup[use]["beam_th"])
@@ -24,7 +26,7 @@ def get_noise(setup):
         sigma_th_polar = np.deg2rad(np.array(setup[use]["sigma_th_polar"]))/60
         N_ell_T = sigma_th_temp[:, None]**2*gaussian_beam
         N_ell_P = sigma_th_polar[:, None]**2*gaussian_beam
-        return N_ell_T, N_ell_P
+        return ell_factor*N_ell_T, ell_factor*N_ell_P
     else:
         raise ValueError("Unkown experiment '{}".format(use))
 
@@ -69,7 +71,7 @@ def get_systematics(setup):
     return TT_syst, TE_syst, EE_syst
 
 
-def get_theory_cls(setup, lmax, ell_factor=False):
+def get_theory_cls(setup, lmax, ell_factor=True):
     # Get simulation parameters
     simu = setup["simulation"]
     cosmo = simu["cosmo. parameters"]
@@ -84,9 +86,9 @@ def get_theory_cls(setup, lmax, ell_factor=False):
     info["params"] = cosmo
     # Fake likelihood so far
     info["likelihood"] = {"one": None}
+
     from cobaya.model import get_model
     model = get_model(info)
-
     model.likelihood.theory.needs(Cl={"tt": lmax, "ee": lmax, "te": lmax})
     model.logposterior({}) # parameters are fixed
     Cls = model.likelihood.theory.get_Cl(ell_factor=ell_factor)

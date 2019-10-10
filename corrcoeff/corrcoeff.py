@@ -13,23 +13,23 @@ def simulation(setup):
     fsky = experiment["fsky"]
 
     from corrcoeff import utils
-    Cls = utils.get_theory_cls(setup, lmax)
+    Dls = utils.get_theory_cls(setup, lmax)
     ls = np.arange(lmin, lmax)
-    Cl_TT = Cls["tt"][lmin:lmax]
-    Cl_TE = Cls["te"][lmin:lmax]
-    Cl_EE = Cls["ee"][lmin:lmax]
+    Dl_TT = Dls["tt"][lmin:lmax]
+    Dl_TE = Dls["te"][lmin:lmax]
+    Dl_EE = Dls["ee"][lmin:lmax]
 
     if experiment.get("systematics_file"):
         syst = np.loadtxt(experiment["systematics_file"])
         syst = syst[:,-1][lmin:lmax]
-        Cl_TT *= syst
-        Cl_TE *= syst
-        Cl_EE *= syst
+        Dl_TT *= syst
+        Dl_TE *= syst
+        Dl_EE *= syst
     elif experiment.get("systematics"):
         syst = utils.get_systematics(experiment)
-        Cl_TT *= syst[0]
-        Cl_TE *= syst[1]
-        Cl_EE *= syst[2]
+        Dl_TT *= syst[0]
+        Dl_TE *= syst[1]
+        Dl_EE *= syst[2]
 
     if experiment.get("add_noise"):
         # Get SO noise
@@ -39,42 +39,41 @@ def simulation(setup):
         N_TT = np.full_like(ls, 0.0)
         N_EE = np.full_like(ls, 0.0)
 
-
     if delta:
         ls = utils.bin_array(ls, delta)
-        Cl_TT = utils.bin_array(Cl_TT, delta)
-        Cl_TE = utils.bin_array(Cl_TE, delta)
-        Cl_EE = utils.bin_array(Cl_EE, delta)
+        Dl_TT = utils.bin_array(Dl_TT, delta)
+        Dl_TE = utils.bin_array(Dl_TE, delta)
+        Dl_EE = utils.bin_array(Dl_EE, delta)
         N_TT = utils.bin_array(N_TT, delta)
         N_EE = utils.bin_array(N_EE, delta)
 
-    R = Cl_TE/np.sqrt(Cl_TT*Cl_EE)
-    covmat_RR   = R**4 - 2*R**2 + 1 + N_TT/Cl_TT + N_EE/Cl_EE + (N_TT*N_EE)/(Cl_TT*Cl_EE) \
-        + R**2*(0.5*(N_TT/Cl_TT - 1)**2 + 0.5*(N_EE/Cl_EE - 1)**2 - 1)
-    covmat_TTTT = 2*(Cl_TT+N_TT)**2
-    covmat_TETE = (Cl_TT+N_TT)*(Cl_EE+N_EE) + Cl_TE**2
-    covmat_EEEE = 2*(Cl_EE+N_EE)**2
+    R = Dl_TE/np.sqrt(Dl_TT*Dl_EE)
+    covmat_RR   = R**4 - 2*R**2 + 1 + N_TT/Dl_TT + N_EE/Dl_EE + (N_TT*N_EE)/(Dl_TT*Dl_EE) \
+        + R**2*(0.5*(N_TT/Dl_TT - 1)**2 + 0.5*(N_EE/Dl_EE - 1)**2 - 1)
+    covmat_TTTT = 2*(Dl_TT+N_TT)**2
+    covmat_TETE = (Dl_TT+N_TT)*(Dl_EE+N_EE) + Dl_TE**2
+    covmat_EEEE = 2*(Dl_EE+N_EE)**2
 
     study = experiment["study"]
     if study == "R":
         # Compute TE correlation factor
         covmat = 1/(2*ls+1)/fsky*covmat_RR
-        Cl_obs = R + np.sqrt(covmat)*np.random.randn(len(ls))
+        Dl_obs = R + np.sqrt(covmat)*np.random.randn(len(ls))
     elif study == "TT":
         covmat = 1/(2*ls+1)/fsky*covmat_TTTT
-        Cl_obs = Cl_TT + np.sqrt(covmat)*np.random.randn(len(ls))
+        Dl_obs = Dl_TT + np.sqrt(covmat)*np.random.randn(len(ls))
     elif study == "TE":
         covmat = 1/(2*ls+1)/fsky*covmat_TETE
-        Cl_obs = Cl_TE + np.sqrt(covmat)*np.random.randn(len(ls))
+        Dl_obs = Dl_TE + np.sqrt(covmat)*np.random.randn(len(ls))
     elif study == "EE":
         covmat = 1/(2*ls+1)/fsky*covmat_EEEE
-        Cl_obs = Cl_EE + np.sqrt(covmat)*np.random.randn(len(ls))
+        Dl_obs = Dl_EE + np.sqrt(covmat)*np.random.randn(len(ls))
     elif "joint" in study:
-        covmat_TTEE = 2*Cl_TE**2
-        covmat_TTTE = 2*(Cl_TT+N_TT)*Cl_TE
-        covmat_TEEE = 2*(Cl_EE+N_EE)*Cl_TE
-        covmat_REE  = R*(covmat_TEEE/Cl_TE - 0.5*covmat_EEEE/Cl_EE - 0.5*covmat_TTEE/Cl_TT)
-        covmat_RTT  = R*(covmat_TTTE/Cl_TE - 0.5*covmat_TTEE/Cl_EE - 0.5*covmat_TTTT/Cl_TT)
+        covmat_TTEE = 2*Dl_TE**2
+        covmat_TTTE = 2*(Dl_TT+N_TT)*Dl_TE
+        covmat_TEEE = 2*(Dl_EE+N_EE)*Dl_TE
+        covmat_REE  = R*(covmat_TEEE/Dl_TE - 0.5*covmat_EEEE/Dl_EE - 0.5*covmat_TTEE/Dl_TT)
+        covmat_RTT  = R*(covmat_TTTE/Dl_TE - 0.5*covmat_TTEE/Dl_EE - 0.5*covmat_TTTT/Dl_TT)
 
         covmat = np.empty((3, 3, len(ls)))
         covmat[0,0,:] = covmat_TTTT
@@ -92,14 +91,14 @@ def simulation(setup):
         if delta:
             covmat /= delta
 
-        Cl_obs = np.array([Cl_TT, Cl_TE, Cl_EE])
+        Dl_obs = np.array([Dl_TT, Dl_TE, Dl_EE])
         for i in range(len(ls)):
             if not np.all(np.linalg.eigvals(covmat[:,:,i]) > 0):
                 raise Exception("Matrix not positive definite !")
-            Cl_obs[:,i] += np.random.multivariate_normal(np.zeros(3), covmat[:,:,i])
+            Dl_obs[:,i] += np.random.multivariate_normal(np.zeros(3), covmat[:,:,i])
 
         if study == "joint_TT_R_EE":
-            Cl_obs[1] /= np.sqrt(Cl_obs[0]*Cl_obs[2])
+            Dl_obs[1] /= np.sqrt(Dl_obs[0]*Dl_obs[2])
             covmat[0,1,:] = covmat[1,0,:] = covmat_RTT
             covmat[1,1,:] = covmat_RR
             covmat[1,2,:] = covmat[2,1,:] = covmat_REE
@@ -109,7 +108,7 @@ def simulation(setup):
 
     # Store simulation informations
     simu = setup["simulation"]
-    simu.update({"ls": ls, "Cl": Cl_obs, "covmat": covmat})
+    simu.update({"ls": ls, "Dl": Dl_obs, "covmat": covmat})
 
 def sampling(setup):
     """
@@ -126,7 +125,7 @@ def sampling(setup):
     study = experiment["study"]
 
     simu = setup["simulation"]
-    Cl, cov = simu["Cl"], simu["covmat"]
+    Dl, cov = simu["Dl"], simu["covmat"]
     if "joint" in study:
         # Invert cov matrix
         inv_cov = np.empty_like(cov)
@@ -134,35 +133,35 @@ def sampling(setup):
             inv_cov[:,:,i] = np.linalg.inv(cov[:,:, i])
 
     # Chi2 for CMB spectra sampling
-    def chi2(_theory={"Cl": {"tt": lmax, "ee": lmax, "te": lmax}}):
-        Cls_theo = _theory.get_Cl(ell_factor=False)
+    def chi2(_theory={"Dl": {"tt": lmax, "ee": lmax, "te": lmax}}):
+        Dls_theo = _theory.get_Cl(ell_factor=True)
         for s in ["tt", "te", "ee"]:
-            Cls_theo[s] = Cls_theo[s][lmin:lmax]
+            Dls_theo[s] = Dls_theo[s][lmin:lmax]
             if delta:
-                Cls_theo[s] = utils.bin_array(Cls_theo[s], delta)
+                Dls_theo[s] = utils.bin_array(Dls_theo[s], delta)
 
         if study == "R":
-            R_theo = Cls_theo["te"]/np.sqrt(Cls_theo["tt"]*Cls_theo["ee"])
-            chi2 = np.sum((Cl - R_theo)**2/cov)
+            R_theo = Dls_theo["te"]/np.sqrt(Dls_theo["tt"]*Dls_theo["ee"])
+            chi2 = np.sum((Dl - R_theo)**2/cov)
         else:
-            chi2 = np.sum((Cl - Cls_theo[study.lower()])**2/cov)
+            chi2 = np.sum((Dl - Dls_theo[study.lower()])**2/cov)
         return -0.5*chi2
 
     # Chi2 for joint analysis
-    def chi2_joint(_theory={"Cl": {"tt": lmax, "ee": lmax, "te": lmax}}):
-        Cls_theo = _theory.get_Cl(ell_factor=False)
+    def chi2_joint(_theory={"Dl": {"tt": lmax, "ee": lmax, "te": lmax}}):
+        Dls_theo = _theory.get_Cl(ell_factor=True)
         for s in ["tt", "te", "ee"]:
-            Cls_theo[s] = Cls_theo[s][lmin:lmax]
+            Dls_theo[s] = Dls_theo[s][lmin:lmax]
             if delta:
-                Cls_theo[s] = utils.bin_array(Cls_theo[s], delta)
-        Cl_theo = np.array([Cls_theo["tt"], Cls_theo["te"], Cls_theo["ee"]])
+                Dls_theo[s] = utils.bin_array(Dls_theo[s], delta)
+        Dl_theo = np.array([Dls_theo["tt"], Dls_theo["te"], Dls_theo["ee"]])
         if study == "joint_TT_R_EE":
-            Cl_theo[1] /= np.sqrt(Cl_theo[0]*Cl_theo[2])
-        delta_Cl = Cl - Cl_theo
+            Dl_theo[1] /= np.sqrt(Dl_theo[0]*Dl_theo[2])
+        delta_Dl = Dl - Dl_theo
 
         chi2 = 0.0
         for i in range(inv_cov.shape[-1]):
-            chi2 += np.dot(delta_Cl[:,i], inv_cov[:,:,i]).dot(delta_Cl[:,i])
+            chi2 += np.dot(delta_Dl[:,i], inv_cov[:,:,i]).dot(delta_Dl[:,i])
         return -0.5*chi2
 
     # Get cobaya setup
