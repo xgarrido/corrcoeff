@@ -1,0 +1,6 @@
+git+https://github.com/xgarrido/corrcoeff.git
+camb
+cobaya
+numpy
+matplotlib
+GetDist
