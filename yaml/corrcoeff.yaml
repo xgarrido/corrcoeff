@@ -14,10 +14,11 @@ simulation:
     r             : &r    0
     Alens         : &Alens 1.
 
+  Pk: import_module('corrcoeff.power_spectra').pk1
+
 experiment:
   lmin : 50
   lmax : 3000
-  delta: 25
   fsky : 0.4
 
   systematics:
@@ -45,7 +46,7 @@ experiment:
 
 # Cobaya setup
 cobaya:
-  debug: False
+  debug: True
   force: True
   force_reproducible: False
 

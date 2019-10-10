@@ -92,6 +92,30 @@ def get_theory_cls(setup, lmax, ell_factor=True):
     model.likelihood.theory.needs(Cl={"tt": lmax, "ee": lmax, "te": lmax})
     model.logposterior({}) # parameters are fixed
     Cls = model.likelihood.theory.get_Cl(ell_factor=ell_factor)
+
+    pars = model.likelihood.theory.camb.CAMBparams()
+    pars.set_cosmology(H0=67.5, ombh2=0.022, omch2=0.122, tau=0.06)
+    pars.set_for_lmax(lmax,lens_potential_accuracy=1)
+    print("before", pars)
+    # if simu.get("Pk", None):
+    #     print("Have Pk")
+    #     if not info.get("theory").get("camb", None):
+    #         raise Exception("Power spectra modification can only be done with 'CAMB'!")
+
+    #     from cobaya.tools import get_external_function
+    #     Pk = get_external_function(simu["Pk"])
+    #     pars.set_initial_power_function(Pk,
+    #                                     args=(cosmo["As"], cosmo["ns"], 0.0599, 280, 0.08, 0.2, 0),
+    #                                     effective_ns_for_nonlinear=cosmo["ns"])
+
+
+    pars.InitPower.set_params(As=cosmo["As"], ns=cosmo["ns"])
+    results = model.likelihood.theory.camb.get_results(pars)
+    cl = results.get_lensed_scalar_cls(CMB_unit ='muK')
+    import pickle
+    pickle.dump({"Cl": cl}, open("cl.pkl", "wb"))
+
+
     return Cls
 
 def fisher(setup, covmat_params):
