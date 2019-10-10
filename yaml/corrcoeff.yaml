@@ -17,15 +17,14 @@ simulation:
 experiment:
   lmin : 50
   lmax : 3000
-  delta: 25
   fsky : 0.4
 
   systematics:
     beam: 5%
     polar: 3%
     TF:
-      min_T: 0.7
-      lmax_T: 400
+      min_T: 0.95
+      lmax_T: 350
 
   use: Planck
   SO:
