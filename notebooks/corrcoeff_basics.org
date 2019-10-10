@@ -560,3 +560,204 @@ Plot spectra for different values of a_pol
 : Text(0, 0.5, '$EE$')
 [[file:./obipy-resources/Jft6WJ.png]]
 :end:
+* Use homemade Pk
+Load setup file
+#+BEGIN_SRC ipython :session venv :results raw drawer
+  import numpy as np
+  import yaml
+  with open("../yaml/corrcoeff.yaml", "r") as stream:
+      setup = yaml.load(stream, Loader=yaml.FullLoader)
+
+  # Get experiment setup
+  experiment = setup["experiment"]
+  fsky = experiment["fsky"]
+  lmin, lmax = 2, 3000
+  experiment["lmin"] = lmin
+  experiment["lmax"] = lmax
+  ls = np.arange(lmin, lmax)
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[3]:
+:end:
+
+#+BEGIN_SRC ipython :session venv :results raw drawer
+  %matplotlib inline
+  import camb
+  import numpy as np
+  import matplotlib.pyplot as plt
+  #Let's look at some non-standard primordial power spectrum, e.g. with wavepacket oscillation
+
+  #Define our custom  power spectrum function (here power law with one wavepacket)
+  def PK(k, As, ns, amp, freq, wid, centre, phase):
+      return As*(k/0.05)**(ns-1)*(1+ np.sin(phase+k*freq)*amp*np.exp(-(k-centre)**2/wid**2))
+
+  #Check how this looks compared to power law
+  freq = 280
+  ks = np.linspace(0.02,1,1000)
+  pk1 = 2e-9*(ks/0.05)**(0.96-1)
+  pk2 = PK(ks,2e-9, 0.96,0.0599, freq, 0.08, 0.2,0)
+  plt.semilogx(ks,pk1)
+  plt.semilogx(ks,pk2)
+  plt.ylabel('$P(k)$')
+  plt.xlabel(r'$k\, {\rm Mpc}$')
+  plt.legend(['Power law','Custom'])
+  plt.title('Scalar initial power spectrum');
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[4]:
+[[file:./obipy-resources/hEFQNL.png]]
+:end:
+
+#+BEGIN_SRC ipython :session venv :results raw drawer
+  #Now compute C_l and compare
+  pars = camb.CAMBparams()
+  pars.set_cosmology(H0=67.5, ombh2=0.022, omch2=0.122, tau=0.06)
+  pars.set_for_lmax(lmax,lens_potential_accuracy=1)
+
+  #For comparison, standard power law
+  pars.InitPower.set_params(As=2e-9, ns=0.96)
+  results = camb.get_results(pars)
+  kwargs = dict(CMB_unit ='muK', raw_cl=False)
+  cl_unlensed=results.get_unlensed_scalar_cls(**kwargs)
+  cl_lensed=results.get_lensed_scalar_cls(**kwargs)
+
+  #Not get custom spectrum (effective_ns_for_nonlinear is used for halofit if required)
+  pars.set_initial_power_function(PK, args=(2e-9, 0.96,0.0599, freq, 0.08, 0.2,0),
+                                  effective_ns_for_nonlinear=0.96)
+
+  results2 = camb.get_results(pars)
+  cl2_unlensed=results2.get_unlensed_scalar_cls(**kwargs)
+  cl2_lensed=results2.get_lensed_scalar_cls(**kwargs)
+
+  plt.plot(ls,(cl2_lensed[lmin:lmax,0]-cl_lensed[lmin:lmax,0]), label="lensed")
+  plt.plot(ls,(cl2_unlensed[lmin:lmax,0]-cl_unlensed[lmin:lmax,0]), label="unlensed")
+  plt.xlabel(r'$\ell$')
+  plt.ylabel(r'$\ell(\ell+1)\Delta C_\ell/2\pi\, [\mu K^2]$')
+  plt.title(r'$C_\ell$ difference to power law');
+  plt.legend()
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[60]:
+: <matplotlib.legend.Legend at 0x7f7b10493950>
+[[file:./obipy-resources/3gylgH.png]]
+:end:
+
+Get SO and Planck noise
+#+BEGIN_SRC ipython :session venv :results raw drawer
+  from corrcoeff import utils
+  N_TT, N_EE = {}, {}
+  use = ["SO", "Planck"]
+  fig, ax = plt.subplots(1, 2, sharey=True)
+  for i in use:
+    experiment["use"] = i
+    N_TT[i], N_EE[i] = utils.get_noise(experiment)
+    N_TT[i], N_EE[i] = 1/np.sum(1/N_TT[i], axis=0), 1/np.sum(1/N_EE[i], axis=0)
+    ax[0].semilogy(ls, N_TT[i], label=i)
+    ax[1].semilogy(ls, N_EE[i], label=i)
+
+  ax[0].legend(title="TT")
+  ax[1].legend(title="EE")
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[26]:
+: <matplotlib.legend.Legend at 0x7f7b24a36c50>
+[[file:./obipy-resources/PA0xEz.png]]
+:end:
+
+#+BEGIN_SRC ipython :session venv :results raw drawer
+  cl, cl2 = cl_lensed[lmin:lmax], cl2_lensed[lmin:lmax]
+
+  Cl_TT, Cl_TE, Cl_EE = cl[:, 0], cl[:, 3], cl[:, 1]
+  R = Cl_TE/np.sqrt(Cl_TT*Cl_EE)
+  Cl_TT_pk, Cl_TE_pk, Cl_EE_pk = cl2[:, 0], cl2[:, 3], cl2[:, 1]
+  R_pk = Cl_TE_pk/np.sqrt(Cl_TT_pk*Cl_EE_pk)
+
+  covmat_RR, covmat_TTTT, covmat_TETE, covmat_EEEE = {}, {}, {}, {}
+  norm = 1/(2*ls+1)/fsky
+  for i in use:
+      covmat_RR[i]   = norm*(R**4 - 2*R**2 + 1 + N_TT[i]/Cl_TT + N_EE[i]/Cl_EE + (N_TT[i]*N_EE[i])/(Cl_TT*Cl_EE) \
+          + R**2*(0.5*(N_TT[i]/Cl_TT - 1)**2 + 0.5*(N_EE[i]/Cl_EE - 1)**2 - 1))
+      covmat_TTTT[i] = norm*(2*(Cl_TT+N_TT[i])**2)
+      covmat_TETE[i] = norm*((Cl_TT+N_TT[i])*(Cl_EE+N_EE[i]) + Cl_TE**2)
+      covmat_EEEE[i] = norm*(2*(Cl_EE+N_EE[i])**2)
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[55]:
+:end:
+
+#+BEGIN_SRC ipython :session venv :results raw drawer
+  fig, ax = plt.subplots(4, 2, sharex=True, figsize=(10, 10))
+  ax[0,0].plot(ls, R)
+  ax[1,0].plot(ls, ls*(ls+1)/2/np.pi*Cl_TE)
+  ax[2,0].plot(ls, ls*(ls+1)/2/np.pi*Cl_TT)
+  ax[3,0].plot(ls, ls*(ls+1)/2/np.pi*Cl_EE)
+
+  ax[0,0].set_ylabel(r"$R$")
+  ax[1,0].set_ylabel(r"$D_\ell(TE)$")
+  ax[2,0].set_ylabel(r"$D_\ell(TT)$")
+  ax[3,0].set_ylabel(r"$D_\ell(EE)$")
+
+  for i in use:
+      ax[0,1].plot(ls, np.sqrt(covmat_RR[i]), label=i)
+      ax[1,1].semilogy(ls, np.sqrt(covmat_TETE[i]), label=i)
+      ax[2,1].semilogy(ls, np.sqrt(covmat_TTTT[i]), label=i)
+      ax[3,1].semilogy(ls, np.sqrt(covmat_EEEE[i]), label=i)
+  ax[0,1].legend()
+
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[56]:
+: <matplotlib.legend.Legend at 0x7f7b1082ae90>
+[[file:./obipy-resources/C2gDEF.png]]
+:end:
+
+#+BEGIN_SRC ipython :session venv :results raw drawer
+  fig, ax = plt.subplots(4, 1, sharex=True, figsize=(8, 10))
+  for i in use:
+      ax[0].plot(ls, (R_pk-R)/np.sqrt(covmat_RR[i]), label=i)
+      ax[1].plot(ls, (Cl_TE_pk-Cl_TE)/np.sqrt(covmat_TETE[i]), label=i)
+      ax[2].plot(ls, (Cl_TT_pk-Cl_TT)/np.sqrt(covmat_TTTT[i]), label=i)
+      ax[3].plot(ls, (Cl_EE_pk-Cl_EE)/np.sqrt(covmat_EEEE[i]), label=i)
+
+  ax[0].legend()
+  ax[0].set_ylabel(r"$\Delta R/\sigma_R$")
+  ax[1].set_ylabel(r"$\Delta C_\ell^{TE}/\sigma_{C_\ell^{TE}}$")
+  ax[2].set_ylabel(r"$\Delta C_\ell^{TT}/\sigma_{C_\ell^{TT}}$")
+  ax[3].set_ylabel(r"$\Delta C_\ell^{EE}/\sigma_{C_\ell^{EE}}$")
+  ax[3].set_xlabel(r"Multipole $\ell$")
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[57]:
+: Text(0.5, 0, 'Multipole $\\ell$')
+[[file:./obipy-resources/pzNRAx.png]]
+:end:
+
+#+BEGIN_SRC ipython :session :results raw drawer
+  plt.plot(ls, cl[2:lmax,0], label="TT")
+  plt.plot(ls, cl[2:lmax,1], label="EE")
+  plt.plot(ls, cl[2:lmax,3], label="TE")
+  plt.yscale("log")
+  plt.xscale("log")
+  plt.legend()
+#+END_SRC
+
+#+RESULTS:
+:results:
+# Out[46]:
+: <matplotlib.legend.Legend at 0x7fe4e3c85110>
+[[file:./obipy-resources/QeNzkQ.png]]
+:end:
