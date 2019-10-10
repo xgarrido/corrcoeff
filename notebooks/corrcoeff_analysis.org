@@ -621,8 +621,10 @@
                "TE" : 1
   }
   cols = [7, 6, 2, 3, 4, 5]
-  samples = get_mcmc_samples(tmpl_path, mcmc_study, cols, labels)
+  samples = get_mcmc_samples_old(tmpl_path, mcmc_study, cols, labels)
 
+  print(np.sqrt(samples[0].getVars()))
+  print(np.sqrt(samples[1].getVars()))
   g = plots.getSubplotPlotter()
   g.settings.lineM = ["-C{}".format(i) for i in range(10)]
   g.triangle_plot(samples, legend_labels=[])
@@ -639,9 +641,9 @@
 
 #+RESULTS:
 :results:
-# Out[94]:
-: [<matplotlib.lines.Line2D at 0x7f1324dc6350>]
-[[file:./obipy-resources/U7krMm.png]]
+# Out[105]:
+: [<matplotlib.lines.Line2D at 0x7f8705d3de10>]
+[[file:./obipy-resources/daCYBO.png]]
 :end:
 ** MCMC for joint analysis
 Load samples
