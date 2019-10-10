@@ -133,7 +133,7 @@ def sampling(setup):
             inv_cov[:,:,i] = np.linalg.inv(cov[:,:, i])
 
     # Chi2 for CMB spectra sampling
-    def chi2(_theory={"Dl": {"tt": lmax, "ee": lmax, "te": lmax}}):
+    def chi2(_theory={"Cl": {"tt": lmax, "ee": lmax, "te": lmax}}):
         Dls_theo = _theory.get_Cl(ell_factor=True)
         for s in ["tt", "te", "ee"]:
             Dls_theo[s] = Dls_theo[s][lmin:lmax]
@@ -148,7 +148,7 @@ def sampling(setup):
         return -0.5*chi2
 
     # Chi2 for joint analysis
-    def chi2_joint(_theory={"Dl": {"tt": lmax, "ee": lmax, "te": lmax}}):
+    def chi2_joint(_theory={"Cl": {"tt": lmax, "ee": lmax, "te": lmax}}):
         Dls_theo = _theory.get_Cl(ell_factor=True)
         for s in ["tt", "te", "ee"]:
             Dls_theo[s] = Dls_theo[s][lmin:lmax]
