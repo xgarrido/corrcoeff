@@ -579,7 +579,7 @@ Load setup file
 
 #+RESULTS:
 :results:
-# Out[3]:
+# Out[7]:
 :end:
 
 #+BEGIN_SRC ipython :session venv :results raw drawer
@@ -593,13 +593,20 @@ Load setup file
   def PK(k, As, ns, amp, freq, wid, centre, phase):
       return As*(k/0.05)**(ns-1)*(1+ np.sin(phase+k*freq)*amp*np.exp(-(k-centre)**2/wid**2))
 
+  def PK_run(k, As, ns, dnsdlnk, dns2dlnk2, kp=0.05):
+      lnPk = np.log(As) + (ns-1)*np.log(k/kp) + 1/2*dnsdlnk*np.log(k/kp)**2 + 1/6*dns2dlnk2*np.log(k/kp)**3
+      return np.exp(lnPk)
+
   #Check how this looks compared to power law
   freq = 280
   ks = np.linspace(0.02,1,1000)
   pk1 = 2e-9*(ks/0.05)**(0.96-1)
   pk2 = PK(ks,2e-9, 0.96,0.0599, freq, 0.08, 0.2,0)
+  args = (2e-9, 0.96, 0.013, 0.022)
+  pk3 = PK_run(ks, *args)
   plt.semilogx(ks,pk1)
   plt.semilogx(ks,pk2)
+  plt.semilogx(ks,pk3)
   plt.ylabel('$P(k)$')
   plt.xlabel(r'$k\, {\rm Mpc}$')
   plt.legend(['Power law','Custom'])
@@ -608,8 +615,8 @@ Load setup file
 
 #+RESULTS:
 :results:
-# Out[4]:
-[[file:./obipy-resources/hEFQNL.png]]
+# Out[26]:
+[[file:./obipy-resources/MoP3S7.png]]
 :end:
 
 #+BEGIN_SRC ipython :session venv :results raw drawer
@@ -626,7 +633,9 @@ Load setup file
   cl_lensed=results.get_lensed_scalar_cls(**kwargs)
 
   #Not get custom spectrum (effective_ns_for_nonlinear is used for halofit if required)
-  pars.set_initial_power_function(PK, args=(2e-9, 0.96,0.0599, freq, 0.08, 0.2,0),
+  # pars.set_initial_power_function(PK, args=(2e-9, 0.96,0.0599, freq, 0.08, 0.2,0),
+  #                                 effective_ns_for_nonlinear=0.96)
+  pars.set_initial_power_function(PK_run, args=args,
                                   effective_ns_for_nonlinear=0.96)
 
   results2 = camb.get_results(pars)
@@ -643,9 +652,9 @@ Load setup file
 
 #+RESULTS:
 :results:
-# Out[60]:
-: <matplotlib.legend.Legend at 0x7f7b10493950>
-[[file:./obipy-resources/3gylgH.png]]
+# Out[27]:
+: <matplotlib.legend.Legend at 0x7fdc3f91ab50>
+[[file:./obipy-resources/DNZAr8.png]]
 :end:
 
 Get SO and Planck noise
@@ -667,40 +676,40 @@ Get SO and Planck noise
 
 #+RESULTS:
 :results:
-# Out[26]:
-: <matplotlib.legend.Legend at 0x7f7b24a36c50>
-[[file:./obipy-resources/PA0xEz.png]]
+# Out[9]:
+: <matplotlib.legend.Legend at 0x7fdc5871b990>
+[[file:./obipy-resources/SrvLjT.png]]
 :end:
 
 #+BEGIN_SRC ipython :session venv :results raw drawer
-  cl, cl2 = cl_lensed[lmin:lmax], cl2_lensed[lmin:lmax]
+  Dl, Dl2 = cl_lensed[lmin:lmax], cl2_lensed[lmin:lmax]
 
-  Cl_TT, Cl_TE, Cl_EE = cl[:, 0], cl[:, 3], cl[:, 1]
-  R = Cl_TE/np.sqrt(Cl_TT*Cl_EE)
-  Cl_TT_pk, Cl_TE_pk, Cl_EE_pk = cl2[:, 0], cl2[:, 3], cl2[:, 1]
-  R_pk = Cl_TE_pk/np.sqrt(Cl_TT_pk*Cl_EE_pk)
+  Dl_TT, Dl_TE, Dl_EE = Dl[:, 0], Dl[:, 3], Dl[:, 1]
+  R = Dl_TE/np.sqrt(Dl_TT*Dl_EE)
+  Dl_TT_pk, Dl_TE_pk, Dl_EE_pk = Dl2[:, 0], Dl2[:, 3], Dl2[:, 1]
+  R_pk = Dl_TE_pk/np.sqrt(Dl_TT_pk*Dl_EE_pk)
 
   covmat_RR, covmat_TTTT, covmat_TETE, covmat_EEEE = {}, {}, {}, {}
   norm = 1/(2*ls+1)/fsky
   for i in use:
-      covmat_RR[i]   = norm*(R**4 - 2*R**2 + 1 + N_TT[i]/Cl_TT + N_EE[i]/Cl_EE + (N_TT[i]*N_EE[i])/(Cl_TT*Cl_EE) \
-          + R**2*(0.5*(N_TT[i]/Cl_TT - 1)**2 + 0.5*(N_EE[i]/Cl_EE - 1)**2 - 1))
-      covmat_TTTT[i] = norm*(2*(Cl_TT+N_TT[i])**2)
-      covmat_TETE[i] = norm*((Cl_TT+N_TT[i])*(Cl_EE+N_EE[i]) + Cl_TE**2)
-      covmat_EEEE[i] = norm*(2*(Cl_EE+N_EE[i])**2)
+      covmat_RR[i]   = norm*(R**4 - 2*R**2 + 1 + N_TT[i]/Dl_TT + N_EE[i]/Dl_EE + (N_TT[i]*N_EE[i])/(Dl_TT*Dl_EE) \
+          + R**2*(0.5*(N_TT[i]/Dl_TT - 1)**2 + 0.5*(N_EE[i]/Dl_EE - 1)**2 - 1))
+      covmat_TTTT[i] = norm*(2*(Dl_TT+N_TT[i])**2)
+      covmat_TETE[i] = norm*((Dl_TT+N_TT[i])*(Dl_EE+N_EE[i]) + Dl_TE**2)
+      covmat_EEEE[i] = norm*(2*(Dl_EE+N_EE[i])**2)
 #+END_SRC
 
 #+RESULTS:
 :results:
-# Out[55]:
+# Out[24]:
 :end:
 
 #+BEGIN_SRC ipython :session venv :results raw drawer
   fig, ax = plt.subplots(4, 2, sharex=True, figsize=(10, 10))
   ax[0,0].plot(ls, R)
-  ax[1,0].plot(ls, ls*(ls+1)/2/np.pi*Cl_TE)
-  ax[2,0].plot(ls, ls*(ls+1)/2/np.pi*Cl_TT)
-  ax[3,0].plot(ls, ls*(ls+1)/2/np.pi*Cl_EE)
+  ax[1,0].plot(ls, Dl_TE)
+  ax[2,0].plot(ls, Dl_TT)
+  ax[3,0].plot(ls, Dl_EE)
 
   ax[0,0].set_ylabel(r"$R$")
   ax[1,0].set_ylabel(r"$D_\ell(TE)$")
@@ -718,32 +727,33 @@ Get SO and Planck noise
 
 #+RESULTS:
 :results:
-# Out[56]:
-: <matplotlib.legend.Legend at 0x7f7b1082ae90>
-[[file:./obipy-resources/C2gDEF.png]]
+# Out[13]:
+: <matplotlib.legend.Legend at 0x7fdc564d3d50>
+[[file:./obipy-resources/CjkVZ3.png]]
 :end:
 
 #+BEGIN_SRC ipython :session venv :results raw drawer
   fig, ax = plt.subplots(4, 1, sharex=True, figsize=(8, 10))
-  for i in use:
-      ax[0].plot(ls, (R_pk-R)/np.sqrt(covmat_RR[i]), label=i)
-      ax[1].plot(ls, (Cl_TE_pk-Cl_TE)/np.sqrt(covmat_TETE[i]), label=i)
-      ax[2].plot(ls, (Cl_TT_pk-Cl_TT)/np.sqrt(covmat_TTTT[i]), label=i)
-      ax[3].plot(ls, (Cl_EE_pk-Cl_EE)/np.sqrt(covmat_EEEE[i]), label=i)
+  for i in ["SO"]:
+      ax[0].plot(ls, (R_pk-R)/np.sqrt(covmat_RR[i]), label="R")
+      ax[0].plot(ls, (Dl_TE_pk-Dl_TE)/np.sqrt(covmat_TETE[i]), label="TE")
+      ax[1].plot(ls, (Dl_TE_pk-Dl_TE)/np.sqrt(covmat_TETE[i]), label=i)
+      ax[2].plot(ls, (Dl_TT_pk-Dl_TT)/np.sqrt(covmat_TTTT[i]), label=i)
+      ax[3].plot(ls, (Dl_EE_pk-Dl_EE)/np.sqrt(covmat_EEEE[i]), label=i)
 
   ax[0].legend()
   ax[0].set_ylabel(r"$\Delta R/\sigma_R$")
-  ax[1].set_ylabel(r"$\Delta C_\ell^{TE}/\sigma_{C_\ell^{TE}}$")
-  ax[2].set_ylabel(r"$\Delta C_\ell^{TT}/\sigma_{C_\ell^{TT}}$")
-  ax[3].set_ylabel(r"$\Delta C_\ell^{EE}/\sigma_{C_\ell^{EE}}$")
+  ax[1].set_ylabel(r"$\Delta D_\ell^{TE}/\sigma_{D_\ell^{TE}}$")
+  ax[2].set_ylabel(r"$\Delta D_\ell^{TT}/\sigma_{D_\ell^{TT}}$")
+  ax[3].set_ylabel(r"$\Delta D_\ell^{EE}/\sigma_{D_\ell^{EE}}$")
   ax[3].set_xlabel(r"Multipole $\ell$")
 #+END_SRC
 
 #+RESULTS:
 :results:
-# Out[57]:
+# Out[25]:
 : Text(0.5, 0, 'Multipole $\\ell$')
-[[file:./obipy-resources/pzNRAx.png]]
+[[file:./obipy-resources/P6ixoR.png]]
 :end:
 
 #+BEGIN_SRC ipython :session :results raw drawer
